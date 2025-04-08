@@ -1,16 +1,48 @@
-# weather_app
+# 🌦️ Flutter Weather App
 
-A new Flutter project.
+A clean and interactive Flutter application that displays real-time weather data, hourly forecasts, and additional information like humidity, wind speed, pressure, sunrise, and sunset. Users can search for any city and switch between multiple temperature units (°C, °F, K, R).
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## 🚀 Features
 
-A few resources to get you started if this is your first Flutter project:
+- 🔍 **Search Weather by City**
+- 🌡️ **Supports Multiple Temperature Units** – Celsius, Fahrenheit, Kelvin, Reaumur
+- ⏰ **Hourly Weather Forecast**
+- 🌅 **Sunrise & Sunset Time Display**
+- 💧 **Additional Info** – Humidity, Wind Speed, Pressure
+- 🔄 **Pull-to-Refresh Weather Updates**
+- 📱 **Clean & Responsive UI**
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+---
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 🧱 Folder Structure
+
+
+---
+
+## 🛠️ Tools & Packages Used
+
+- **Flutter** – Cross-platform UI toolkit
+- **Dart** – Programming language for Flutter
+- **http** – For API requests
+- **intl** – Date/time formatting
+- **OpenWeatherMap API** – Weather data source
+
+---
+
+## 🔧 Setup & Installation
+
+1. **Clone the Repository**
+   ```bash
+   git clone https://github.com/your-username/flutter-weather-app.git
+   cd flutter-weather-app
+
+2. **Install Dependencies**
+     flutter pub get
+
+3. **Run the Application**
+     flutter run
+
+
+
