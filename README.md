@@ -35,7 +35,7 @@ A clean and interactive Flutter application that displays real-time weather data
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/your-username/flutter-weather-app.git
+   git clone https://github.com/Karthik-312/flutter-weather-app.git
    cd flutter-weather-app
 
 2. **Install Dependencies**
