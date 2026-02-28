@@ -59,4 +59,19 @@ class WeatherService {
     );
     return jsonDecode(res.body);
   }
+
+  static Future<List<Map<String, dynamic>>> searchCities(String query) async {
+    if (query.length < 2) return [];
+    try {
+      final res = await http.get(Uri.parse(
+        'https://api.openweathermap.org/geo/1.0/direct'
+        '?q=$query&limit=5&appid=$openWeatherAPIKey',
+      ));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return List<Map<String, dynamic>>.from(data);
+      }
+    } catch (_) {}
+    return [];
+  }
 }
