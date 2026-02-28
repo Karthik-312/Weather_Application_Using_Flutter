@@ -19,6 +19,12 @@ import 'package:weather_app/screens/compare_screen.dart';
 import 'package:weather_app/screens/world_feed_screen.dart';
 import 'package:weather_app/screens/mood_journal_screen.dart';
 import 'package:weather_app/screens/travel_planner_screen.dart';
+import 'package:weather_app/screens/weather_history_screen.dart';
+import 'package:weather_app/screens/ambient_sounds_screen.dart';
+import 'package:weather_app/widgets/astronomy_card.dart';
+import 'package:weather_app/widgets/activity_suggestions_card.dart';
+import 'package:weather_app/widgets/pressure_trend_card.dart';
+import 'package:weather_app/widgets/weather_trivia_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -155,6 +161,14 @@ class _HomeScreenState extends State<HomeScreen>
                                   const SizedBox(height: 28),
                                   _buildTempChart(provider),
                                   const SizedBox(height: 28),
+                                  _buildActivitySuggestions(provider),
+                                  const SizedBox(height: 28),
+                                  _buildAstronomy(provider),
+                                  const SizedBox(height: 28),
+                                  _buildPressureTrend(provider),
+                                  const SizedBox(height: 28),
+                                  const WeatherTriviaCard(),
+                                  const SizedBox(height: 28),
                                   _buildSuggestions(provider),
                                   const SizedBox(height: 40),
                                 ],
@@ -232,6 +246,7 @@ class _HomeScreenState extends State<HomeScreen>
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             onSelected: (value) {
               Widget? screen;
+              HapticFeedback.lightImpact();
               switch (value) {
                 case 'favorites':
                   screen = const FavoritesScreen();
@@ -248,6 +263,13 @@ class _HomeScreenState extends State<HomeScreen>
                 case 'travel':
                   screen = const TravelPlannerScreen();
                   break;
+                case 'history':
+                  screen = const WeatherHistoryScreen();
+                  break;
+                case 'ambient':
+                  screen = AmbientSoundsScreen(
+                      currentCondition: provider.currentCondition);
+                  break;
                 case 'settings':
                   screen = const SettingsScreen();
                   break;
@@ -263,6 +285,8 @@ class _HomeScreenState extends State<HomeScreen>
               _buildPopupItem(Icons.public_rounded, 'World Weather', 'world'),
               _buildPopupItem(Icons.book_rounded, 'Mood Journal', 'mood'),
               _buildPopupItem(Icons.flight_takeoff_rounded, 'Travel Planner', 'travel'),
+              _buildPopupItem(Icons.history_rounded, 'Data & History', 'history'),
+              _buildPopupItem(Icons.headphones_rounded, 'Ambient Sounds', 'ambient'),
               _buildPopupItem(Icons.settings_rounded, 'Settings', 'settings'),
             ],
           ),
@@ -968,6 +992,48 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
       ],
+    );
+  }
+
+  // ── Activity Suggestions ──
+  Widget _buildActivitySuggestions(WeatherProvider provider) {
+    final weather = provider.currentWeather!;
+    final tempC =
+        (weather['main']['temp'] as num).toDouble() - 273.15;
+    final windSpeed =
+        (weather['wind']['speed'] as num).toDouble();
+    final humidity =
+        (weather['main']['humidity'] as num).toDouble();
+
+    return ActivitySuggestionsCard(
+      condition: provider.currentCondition,
+      tempC: tempC,
+      windSpeed: windSpeed,
+      humidity: humidity,
+      isNight: provider.isNight,
+    );
+  }
+
+  // ── Astronomy ──
+  Widget _buildAstronomy(WeatherProvider provider) {
+    final weather = provider.currentWeather!;
+    final sunrise =
+        (weather['sys']['sunrise'] as num).toInt();
+    final sunset =
+        (weather['sys']['sunset'] as num).toInt();
+    return AstronomyCard(
+      sunriseTimestamp: sunrise,
+      sunsetTimestamp: sunset,
+    );
+  }
+
+  // ── Pressure Trend ──
+  Widget _buildPressureTrend(WeatherProvider provider) {
+    final pressure =
+        (provider.currentWeather!['main']['pressure'] as num).toInt();
+    return PressureTrendCard(
+      currentPressure: pressure,
+      pressureChange: provider.pressureChange,
     );
   }
 

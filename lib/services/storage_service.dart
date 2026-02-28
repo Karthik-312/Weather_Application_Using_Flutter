@@ -108,4 +108,105 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('mood_entries');
   }
+
+  // ── Weather History ──
+
+  static Future<List<Map<String, dynamic>>> loadWeatherHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final str = prefs.getString('weather_history');
+    if (str == null) return [];
+    return List<Map<String, dynamic>>.from(jsonDecode(str));
+  }
+
+  static Future<void> saveWeatherSnapshot(Map<String, dynamic> snapshot) async {
+    final prefs = await SharedPreferences.getInstance();
+    final history = await loadWeatherHistory();
+
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final city = snapshot['city'] ?? '';
+    history.removeWhere(
+        (e) => (e['date'] ?? '') == today && (e['city'] ?? '') == city);
+
+    history.insert(0, {...snapshot, 'date': today});
+    if (history.length > 90) history.removeLast();
+    await prefs.setString('weather_history', jsonEncode(history));
+  }
+
+  static Future<void> clearWeatherHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('weather_history');
+  }
+
+  // ── Pressure History ──
+
+  static Future<List<Map<String, dynamic>>> loadPressureHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final str = prefs.getString('pressure_history');
+    if (str == null) return [];
+    return List<Map<String, dynamic>>.from(jsonDecode(str));
+  }
+
+  static Future<void> savePressureReading(int pressure, String city) async {
+    final prefs = await SharedPreferences.getInstance();
+    final history = await loadPressureHistory();
+    history.insert(0, {
+      'pressure': pressure,
+      'city': city,
+      'timestamp': DateTime.now().toIso8601String(),
+    });
+    if (history.length > 48) history.removeLast();
+    await prefs.setString('pressure_history', jsonEncode(history));
+  }
+
+  // ── Custom Accent Color ──
+
+  static Future<int> loadAccentColor() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('accent_color') ?? 0xFF6200EA;
+  }
+
+  static Future<void> saveAccentColor(int colorValue) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('accent_color', colorValue);
+  }
+
+  // ── Onboarding ──
+
+  static Future<bool> hasSeenOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('seen_onboarding') ?? false;
+  }
+
+  static Future<void> setOnboardingSeen() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('seen_onboarding', true);
+  }
+
+  // ── Export ──
+
+  static Future<String> exportMoodJournalCSV() async {
+    final entries = await loadMoodEntries();
+    final buf = StringBuffer('Date,Mood,Note,City,Temperature,Condition\n');
+    for (final e in entries) {
+      final date = e['timestamp'] ?? '';
+      final mood = e['mood'] ?? '';
+      final note = (e['note'] ?? '').toString().replaceAll(',', ';');
+      final city = e['city'] ?? '';
+      final temp = e['temp'] ?? '';
+      final cond = e['condition'] ?? '';
+      buf.writeln('$date,$mood,$note,$city,$temp,$cond');
+    }
+    return buf.toString();
+  }
+
+  static Future<String> exportWeatherHistoryCSV() async {
+    final history = await loadWeatherHistory();
+    final buf = StringBuffer(
+        'Date,City,Temp(C),Condition,Humidity(%),Wind(m/s),Pressure(hPa)\n');
+    for (final e in history) {
+      buf.writeln(
+          '${e['date']},${e['city']},${e['temp']},${e['condition']},${e['humidity']},${e['wind']},${e['pressure']}');
+    }
+    return buf.toString();
+  }
 }

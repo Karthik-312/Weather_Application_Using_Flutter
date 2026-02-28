@@ -17,6 +17,9 @@ class WeatherProvider extends ChangeNotifier {
   double? _lon;
   bool _isDarkMode = true;
   bool _isOfflineData = false;
+  Color _accentColor = const Color(0xFF6200EA);
+  double _pressureChange = 0;
+  int? _lastPressure;
 
   String get currentCity => _currentCity;
   Map<String, dynamic>? get currentWeather => _currentWeather;
@@ -30,6 +33,8 @@ class WeatherProvider extends ChangeNotifier {
   double? get lon => _lon;
   bool get isDarkMode => _isDarkMode;
   bool get isOfflineData => _isOfflineData;
+  Color get accentColor => _accentColor;
+  double get pressureChange => _pressureChange;
 
   bool get isFavorite => _favoriteCities.contains(_currentCity);
 
@@ -111,6 +116,8 @@ class WeatherProvider extends ChangeNotifier {
     _isDarkMode = await StorageService.loadDarkMode();
     _currentCity = await StorageService.loadLastCity();
     _favoriteCities = await StorageService.loadFavorites();
+    final accentVal = await StorageService.loadAccentColor();
+    _accentColor = Color(accentVal);
     await fetchWeather();
   }
 
@@ -137,6 +144,29 @@ class WeatherProvider extends ChangeNotifier {
       StorageService.cacheWeatherData(
           _currentCity, _currentWeather!, _forecastData!, _airQualityData);
       await StorageService.saveLastCity(_currentCity);
+
+      // Track pressure trend
+      final pressure =
+          (_currentWeather!['main']['pressure'] as num).toInt();
+      if (_lastPressure != null) {
+        _pressureChange = (pressure - _lastPressure!).toDouble();
+      }
+      _lastPressure = pressure;
+      StorageService.savePressureReading(pressure, _currentCity);
+
+      // Save weather history snapshot
+      final tempC =
+          ((_currentWeather!['main']['temp'] as num).toDouble() - 273.15)
+              .round();
+      StorageService.saveWeatherSnapshot({
+        'city': _currentCity,
+        'temp': tempC,
+        'condition':
+            _currentWeather!['weather'][0]['main'],
+        'humidity': _currentWeather!['main']['humidity'],
+        'wind': _currentWeather!['wind']['speed'],
+        'pressure': pressure,
+      });
     } catch (e) {
       // Fallback to cached data
       final cached = await StorageService.loadCachedWeather(_currentCity);
@@ -220,6 +250,12 @@ class WeatherProvider extends ChangeNotifier {
   void toggleTheme() {
     _isDarkMode = !_isDarkMode;
     StorageService.saveDarkMode(_isDarkMode);
+    notifyListeners();
+  }
+
+  void setAccentColor(Color color) {
+    _accentColor = color;
+    StorageService.saveAccentColor(color.value);
     notifyListeners();
   }
 
