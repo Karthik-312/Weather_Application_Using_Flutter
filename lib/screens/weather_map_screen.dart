@@ -27,6 +27,7 @@ class WeatherMapScreen extends StatefulWidget {
 class _WeatherMapScreenState extends State<WeatherMapScreen> {
   String _activeLayer = 'temp_new';
   Map<String, dynamic>? _tappedWeather;
+  Map<String, dynamic>? _tappedAddress;
   LatLng? _tappedLocation;
   bool _isLoadingWeather = false;
   bool _showHint = true;
@@ -57,16 +58,26 @@ class _WeatherMapScreenState extends State<WeatherMapScreen> {
     });
 
     try {
-      final res = await http.get(Uri.parse(
-        'https://api.openweathermap.org/data/2.5/weather'
-        '?lat=${point.latitude}&lon=${point.longitude}'
-        '&appid=$openWeatherAPIKey',
-      ));
-      final data = jsonDecode(res.body);
+      final results = await Future.wait([
+        http.get(Uri.parse(
+          'https://api.openweathermap.org/data/2.5/weather'
+          '?lat=${point.latitude}&lon=${point.longitude}'
+          '&appid=$openWeatherAPIKey',
+        )),
+        http.get(Uri.parse(
+          'https://nominatim.openstreetmap.org/reverse'
+          '?lat=${point.latitude}&lon=${point.longitude}'
+          '&format=json&addressdetails=1&zoom=18',
+        ), headers: {'User-Agent': 'WeatherApp/2.0'}),
+      ]);
 
-      if (data['cod'] == 200 && mounted) {
+      final weatherData = jsonDecode(results[0].body);
+      final addressData = jsonDecode(results[1].body);
+
+      if (weatherData['cod'] == 200 && mounted) {
         setState(() {
-          _tappedWeather = data;
+          _tappedWeather = weatherData;
+          _tappedAddress = addressData;
           _isLoadingWeather = false;
         });
         _showWeatherBottomSheet();
@@ -76,6 +87,45 @@ class _WeatherMapScreenState extends State<WeatherMapScreen> {
     } catch (_) {
       if (mounted) setState(() => _isLoadingWeather = false);
     }
+  }
+
+  String _buildStreetAddress() {
+    if (_tappedAddress == null || _tappedAddress!['address'] == null) {
+      return _tappedWeather?['name'] ?? 'Unknown Location';
+    }
+    final addr = _tappedAddress!['address'] as Map<String, dynamic>;
+
+    final street = addr['road'] ?? addr['pedestrian'] ?? addr['footway'] ?? '';
+    final houseNo = addr['house_number'] ?? '';
+    final suburb = addr['suburb'] ?? addr['neighbourhood'] ?? addr['hamlet'] ?? '';
+    final city = addr['city'] ?? addr['town'] ?? addr['village'] ?? '';
+    final state = addr['state'] ?? '';
+    final country = addr['country_code']?.toString().toUpperCase() ?? '';
+
+    final parts = <String>[];
+    if (houseNo.isNotEmpty && street.isNotEmpty) {
+      parts.add('$houseNo $street');
+    } else if (street.isNotEmpty) {
+      parts.add(street);
+    }
+    if (suburb.isNotEmpty) parts.add(suburb);
+    if (city.isNotEmpty) parts.add(city);
+    if (state.isNotEmpty) parts.add(state);
+    if (country.isNotEmpty) parts.add(country);
+
+    return parts.isNotEmpty ? parts.join(', ') : 'Unknown Location';
+  }
+
+  String _getShortLocationName() {
+    if (_tappedAddress == null || _tappedAddress!['address'] == null) {
+      return _tappedWeather?['name'] ?? 'Pin';
+    }
+    final addr = _tappedAddress!['address'] as Map<String, dynamic>;
+    final street = addr['road'] ?? addr['pedestrian'] ?? addr['footway'] ?? '';
+    final suburb = addr['suburb'] ?? addr['neighbourhood'] ?? '';
+    if (street.isNotEmpty) return street;
+    if (suburb.isNotEmpty) return suburb;
+    return addr['city'] ?? addr['town'] ?? addr['village'] ?? 'Pin';
   }
 
   void _showWeatherBottomSheet() {
@@ -94,10 +144,9 @@ class _WeatherMapScreenState extends State<WeatherMapScreen> {
     final condition = w['weather'][0]['main'] as String;
     final description =
         WeatherUtils.capitalizeWords(w['weather'][0]['description'] ?? '');
-    final locationName = w['name'] ?? 'Unknown';
-    final country = w['sys']?['country'] ?? '';
     final icon = WeatherUtils.getWeatherIcon(condition);
     final gradientColors = WeatherUtils.getWeatherGradient(condition, false);
+    final streetAddress = _buildStreetAddress();
 
     showModalBottomSheet(
       context: context,
@@ -148,15 +197,26 @@ class _WeatherMapScreenState extends State<WeatherMapScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '$locationName${country.isNotEmpty ? ', $country' : ''}',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          overflow: TextOverflow.ellipsis,
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on_rounded,
+                                color: Colors.white70, size: 14),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                streetAddress,
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
+                        const SizedBox(height: 2),
                         Text(
                           description,
                           style: GoogleFonts.poppins(
@@ -409,11 +469,40 @@ class _WeatherMapScreenState extends State<WeatherMapScreen> {
                   ),
                   if (_tappedLocation != null)
                     Marker(
-                      width: 40,
-                      height: 40,
+                      width: 160,
+                      height: 60,
                       point: _tappedLocation!,
-                      child: const Icon(Icons.place_rounded,
-                          color: Colors.redAccent, size: 36),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.redAccent,
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.4),
+                                  blurRadius: 4,
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              _getShortLocationName(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const Icon(Icons.place_rounded,
+                              color: Colors.redAccent, size: 30),
+                        ],
+                      ),
                     ),
                 ],
               ),
