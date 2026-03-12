@@ -16,6 +16,10 @@ class AstronomyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final secondaryColor = isDark ? Colors.white70 : const Color(0xFF64748B);
+
     final moon = WeatherUtils.getMoonPhaseInfo(DateTime.now());
     final golden =
         WeatherUtils.getGoldenHour(sunriseTimestamp, sunsetTimestamp);
@@ -51,14 +55,13 @@ class AstronomyCard extends StatelessWidget {
       children: [
         Text('Astronomy',
             style: GoogleFonts.poppins(
-                color: Colors.white,
+                color: primaryColor,
                 fontSize: 17,
                 fontWeight: FontWeight.w600)),
         const SizedBox(height: 14),
         GlassContainer(
           child: Column(
             children: [
-              // Sun row
               Row(
                 children: [
                   _buildInfoBlock(
@@ -66,18 +69,24 @@ class AstronomyCard extends StatelessWidget {
                     'Sunrise',
                     fmt.format(sunrise),
                     Colors.orangeAccent,
+                    primaryColor,
+                    secondaryColor,
                   ),
                   _buildInfoBlock(
                     Icons.nights_stay_outlined,
                     'Sunset',
                     fmt.format(sunset),
                     Colors.indigoAccent,
+                    primaryColor,
+                    secondaryColor,
                   ),
                   _buildInfoBlock(
                     Icons.schedule_rounded,
                     'Day Length',
                     dayLength,
                     Colors.cyanAccent,
+                    primaryColor,
+                    secondaryColor,
                   ),
                 ],
               ),
@@ -87,7 +96,9 @@ class AstronomyCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
+                  color: isDark
+                      ? Colors.white.withOpacity(0.05)
+                      : Colors.black.withOpacity(0.04),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
@@ -124,13 +135,13 @@ class AstronomyCard extends StatelessWidget {
                   children: [
                     Text(moon['name'] as String,
                         style: GoogleFonts.poppins(
-                            color: Colors.white,
+                            color: primaryColor,
                             fontSize: 15,
                             fontWeight: FontWeight.w600)),
                     Text(
                       '${moon['illumination']}% illuminated',
                       style: GoogleFonts.poppins(
-                          color: Colors.white54, fontSize: 12),
+                          color: secondaryColor, fontSize: 12),
                     ),
                   ],
                 ),
@@ -154,7 +165,7 @@ class AstronomyCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text('Golden Hour',
                       style: GoogleFonts.poppins(
-                          color: Colors.white,
+                          color: primaryColor,
                           fontSize: 14,
                           fontWeight: FontWeight.w600)),
                 ],
@@ -167,6 +178,7 @@ class AstronomyCard extends StatelessWidget {
                       'Morning',
                       '${golden['morningStart']} - ${golden['morningEnd']}',
                       Icons.wb_sunny_rounded,
+                      secondaryColor,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -175,6 +187,7 @@ class AstronomyCard extends StatelessWidget {
                       'Evening',
                       '${golden['eveningStart']} - ${golden['eveningEnd']}',
                       Icons.wb_twilight_rounded,
+                      secondaryColor,
                     ),
                   ),
                 ],
@@ -187,7 +200,8 @@ class AstronomyCard extends StatelessWidget {
   }
 
   Widget _buildInfoBlock(
-      IconData icon, String label, String value, Color color) {
+      IconData icon, String label, String value, Color color,
+      Color primaryColor, Color secondaryColor) {
     return Expanded(
       child: Column(
         children: [
@@ -195,10 +209,10 @@ class AstronomyCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(label,
               style: GoogleFonts.poppins(
-                  color: Colors.white38, fontSize: 10)),
+                  color: secondaryColor, fontSize: 10)),
           Text(value,
               style: GoogleFonts.poppins(
-                  color: Colors.white,
+                  color: primaryColor,
                   fontSize: 13,
                   fontWeight: FontWeight.w500)),
         ],
@@ -217,7 +231,7 @@ class AstronomyCard extends StatelessWidget {
   }
 
   Widget _goldenHourSlot(
-      String label, String time, IconData icon) {
+      String label, String time, IconData icon, Color secondaryColor) {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -232,7 +246,7 @@ class AstronomyCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(label,
               style: GoogleFonts.poppins(
-                  color: Colors.white54, fontSize: 10)),
+                  color: secondaryColor, fontSize: 10)),
           Text(time,
               style: GoogleFonts.poppins(
                   color: Colors.orangeAccent,
@@ -264,7 +278,6 @@ class _MoonPhasePainter extends CustomPainter {
     final curveOffset = radius * (1 - illumination * 2).abs();
 
     if (phase <= 0.5) {
-      // Waxing: right side illuminated
       path.addArc(
         Rect.fromCircle(center: center, radius: radius),
         -1.5708,
@@ -280,7 +293,6 @@ class _MoonPhasePainter extends CustomPainter {
         false,
       );
     } else {
-      // Waning: left side illuminated
       path.addArc(
         Rect.fromCircle(center: center, radius: radius),
         1.5708,

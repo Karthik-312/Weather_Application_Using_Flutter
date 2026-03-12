@@ -61,7 +61,7 @@ class WeatherService {
   }
 
   static Future<List<Map<String, dynamic>>> searchCities(String query) async {
-    if (query.length < 2) return [];
+    if (query.trim().length < 2) return [];
     try {
       final res = await http.get(Uri.parse(
         'https://api.openweathermap.org/geo/1.0/direct'

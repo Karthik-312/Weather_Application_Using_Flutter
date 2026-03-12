@@ -92,6 +92,13 @@ class WeatherUtils {
     }
   }
 
+  /// Green = good, Red = harmful (for real-time AQI display)
+  static Color getAQISeverityColor(int aqi) {
+    if (aqi <= 2) return const Color(0xFF4CAF50);
+    if (aqi == 3) return const Color(0xFFFFC107);
+    return const Color(0xFFF44336);
+  }
+
   static String getAQILabel(int aqi) {
     switch (aqi) {
       case 1:

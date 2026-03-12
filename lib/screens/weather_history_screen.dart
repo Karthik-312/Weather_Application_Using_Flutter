@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:weather_app/providers/weather_provider.dart';
 import 'package:weather_app/services/storage_service.dart';
 import 'package:weather_app/utils/weather_utils.dart';
 import 'package:weather_app/widgets/glass_container.dart';
@@ -70,38 +72,35 @@ class _WeatherHistoryScreenState extends State<WeatherHistoryScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text('Data & History',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.deepPurpleAccent,
-          labelStyle: GoogleFonts.poppins(
-              fontSize: 13, fontWeight: FontWeight.w600),
-          unselectedLabelStyle: GoogleFonts.poppins(fontSize: 13),
-          tabs: const [
-            Tab(text: 'Weather Log'),
-            Tab(text: 'Mood Journal'),
-          ],
-        ),
-      ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFF0f0c29),
-              Color(0xFF302b63),
-              Color(0xFF24243e)
+    return Consumer<WeatherProvider>(
+      builder: (context, provider, _) => Scaffold(
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: Text('Data & History',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+          bottom: TabBar(
+            controller: _tabController,
+            indicatorColor: Colors.deepPurpleAccent,
+            labelStyle: GoogleFonts.poppins(
+                fontSize: 13, fontWeight: FontWeight.w600),
+            unselectedLabelStyle: GoogleFonts.poppins(fontSize: 13),
+            tabs: const [
+              Tab(text: 'Weather Log'),
+              Tab(text: 'Mood Journal'),
             ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
           ),
         ),
-        child: SafeArea(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: provider.backgroundGradient,
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+          child: SafeArea(
           child: _isLoading
               ? const Center(
                   child:
@@ -113,6 +112,7 @@ class _WeatherHistoryScreenState extends State<WeatherHistoryScreen>
                     _buildMoodHistory(),
                   ],
                 ),
+          ),
         ),
       ),
     );

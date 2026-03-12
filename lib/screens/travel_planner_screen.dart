@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:weather_app/providers/weather_provider.dart';
 import 'package:weather_app/services/weather_service.dart';
 import 'package:weather_app/utils/weather_utils.dart';
 import 'package:weather_app/widgets/glass_container.dart';
@@ -52,23 +54,24 @@ class _TravelPlannerScreenState extends State<TravelPlannerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text('Travel Planner',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-      ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF0f0c29), Color(0xFF302b63), Color(0xFF24243e)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
+    return Consumer<WeatherProvider>(
+      builder: (context, provider, _) => Scaffold(
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: Text('Travel Planner',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
         ),
-        child: SafeArea(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: provider.backgroundGradient,
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+          child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -131,6 +134,7 @@ class _TravelPlannerScreenState extends State<TravelPlannerScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 

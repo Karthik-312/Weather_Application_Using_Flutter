@@ -33,6 +33,11 @@ class _WeatherTriviaCardState extends State<WeatherTriviaCard> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final secondaryColor = isDark ? Colors.white70 : const Color(0xFF64748B);
+    final hintColor = isDark ? Colors.white30 : const Color(0xFF94A3B8);
+
     return GestureDetector(
       onTap: () =>
           setState(() => _currentFact = WeatherUtils.getRandomTrivia()),
@@ -67,13 +72,13 @@ class _WeatherTriviaCardState extends State<WeatherTriviaCard> {
                       _currentFact,
                       key: ValueKey(_currentFact),
                       style: GoogleFonts.poppins(
-                          color: Colors.white70, fontSize: 12, height: 1.4),
+                          color: secondaryColor, fontSize: 12, height: 1.4),
                     ),
                   ),
                   const SizedBox(height: 6),
                   Text('Tap for another fact',
                       style: GoogleFonts.poppins(
-                          color: Colors.white24, fontSize: 10)),
+                          color: hintColor, fontSize: 10)),
                 ],
               ),
             ),

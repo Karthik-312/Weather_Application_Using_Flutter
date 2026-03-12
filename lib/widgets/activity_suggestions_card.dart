@@ -22,6 +22,10 @@ class ActivitySuggestionsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final secondaryColor = isDark ? Colors.white70 : const Color(0xFF64748B);
+
     final suggestions = WeatherUtils.getActivitySuggestions(
         condition, tempC, windSpeed, humidity, isNight);
 
@@ -32,7 +36,7 @@ class ActivitySuggestionsCard extends StatelessWidget {
       children: [
         Text('Activity Ideas',
             style: GoogleFonts.poppins(
-                color: Colors.white,
+                color: primaryColor,
                 fontSize: 17,
                 fontWeight: FontWeight.w600)),
         const SizedBox(height: 14),
@@ -52,9 +56,9 @@ class ActivitySuggestionsCard extends StatelessWidget {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
-                      color: (s['color'] as Color).withOpacity(0.15),
+                      color: (s['color'] as Color).withOpacity(0.12),
                       border: Border.all(
-                        color: (s['color'] as Color).withOpacity(0.25),
+                        color: (s['color'] as Color).withOpacity(0.3),
                       ),
                     ),
                     child: Column(
@@ -74,7 +78,7 @@ class ActivitySuggestionsCard extends StatelessWidget {
                           child: Text(
                             s['text'] as String,
                             style: GoogleFonts.poppins(
-                                color: Colors.white70, fontSize: 11),
+                                color: secondaryColor, fontSize: 11),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),

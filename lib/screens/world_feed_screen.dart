@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:weather_app/providers/weather_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:weather_app/services/weather_service.dart';
 import 'package:weather_app/utils/weather_utils.dart';
@@ -20,11 +23,50 @@ class _WorldFeedScreenState extends State<WorldFeedScreen> {
 
   final Map<String, Map<String, dynamic>> _weatherData = {};
   bool _isLoading = true;
+  final _searchController = TextEditingController();
+  List<Map<String, dynamic>> _suggestions = [];
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
     _fetchAllWeather();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () async {
+      if (query.trim().length < 2) {
+        setState(() => _suggestions = []);
+        return;
+      }
+      final results = await WeatherService.searchCities(query);
+      if (mounted) setState(() => _suggestions = results);
+    });
+  }
+
+  void _addSearchedCity(String cityName) {
+    if (_worldCities.contains(cityName)) return;
+    setState(() {
+      _worldCities.insert(0, cityName);
+      _suggestions = [];
+      _searchController.clear();
+    });
+    _fetchCityWeather(cityName);
+  }
+
+  Future<void> _fetchCityWeather(String city) async {
+    try {
+      final data = await WeatherService.fetchCurrentWeather(city);
+      if (mounted) setState(() => _weatherData[city] = data);
+    } catch (_) {}
   }
 
   Future<void> _fetchAllWeather() async {
@@ -42,31 +84,34 @@ class _WorldFeedScreenState extends State<WorldFeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text('World Weather',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-            onPressed: () {
-              _weatherData.clear();
-              _fetchAllWeather();
-            },
-          ),
-        ],
-      ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF0f0c29), Color(0xFF302b63), Color(0xFF24243e)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
+    return Consumer<WeatherProvider>(
+      builder: (context, provider, _) => Scaffold(
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: Text('World Weather',
+              style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600,
+                  color: provider.primaryTextColor)),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.refresh_rounded, color: provider.primaryTextColor),
+              onPressed: () {
+                _weatherData.clear();
+                _fetchAllWeather();
+              },
+            ),
+          ],
         ),
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: provider.backgroundGradient,
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
         child: SafeArea(
           child: _isLoading && _weatherData.isEmpty
               ? const Center(
@@ -76,18 +121,87 @@ class _WorldFeedScreenState extends State<WorldFeedScreen> {
                     _weatherData.clear();
                     await _fetchAllWeather();
                   },
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _worldCities.length,
-                    itemBuilder: (context, index) {
-                      final city = _worldCities[index];
-                      final weather = _weatherData[city];
-                      return _buildCityCard(city, weather);
-                    },
+                  child: CustomScrollView(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              GlassContainer(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                borderRadius: 16,
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.search_rounded, color: Colors.white54, size: 20),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: TextField(
+                                        controller: _searchController,
+                                        style: GoogleFonts.poppins(color: Colors.white, fontSize: 15),
+                                        decoration: InputDecoration(
+                                          hintText: 'Search city (e.g. Lon, New, Tok...)',
+                                          hintStyle: GoogleFonts.poppins(color: Colors.white30, fontSize: 14),
+                                          border: InputBorder.none,
+                                        ),
+                                        onChanged: _onSearchChanged,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (_suggestions.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.black54,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(color: Colors.white12),
+                                  ),
+                                  child: Column(
+                                    children: _suggestions.map((s) {
+                                      final name = s['name'] ?? '';
+                                      final country = s['country'] ?? '';
+                                      final state = s['state'] ?? '';
+                                      final subtitle = [if (state.toString().isNotEmpty) state, country].join(', ');
+                                      return ListTile(
+                                        dense: true,
+                                        leading: const Icon(Icons.location_on_outlined, color: Colors.white38, size: 18),
+                                        title: Text(name, style: GoogleFonts.poppins(color: Colors.white, fontSize: 14)),
+                                        subtitle: subtitle.isNotEmpty
+                                            ? Text(subtitle, style: GoogleFonts.poppins(color: Colors.white30, fontSize: 11))
+                                            : null,
+                                        onTap: () => _addSearchedCity(name),
+                                      );
+                                    }).toList(),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final city = _worldCities[index];
+                            final weather = _weatherData[city];
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                              child: _buildCityCard(city, weather),
+                            );
+                          },
+                          childCount: _worldCities.length,
+                        ),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                    ],
                   ),
                 ),
         ),
       ),
+    ),
     );
   }
 

@@ -15,6 +15,11 @@ class PressureTrendCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final secondaryColor = isDark ? Colors.white54 : const Color(0xFF64748B);
+    final hintColor = isDark ? Colors.white30 : const Color(0xFF94A3B8);
+
     final label = WeatherUtils.getPressureTrendLabel(pressureChange);
     final icon = WeatherUtils.getPressureTrendIcon(pressureChange);
     final color = WeatherUtils.getPressureTrendColor(pressureChange);
@@ -53,13 +58,13 @@ class PressureTrendCard extends StatelessWidget {
                   children: [
                     Text('Pressure Trend',
                         style: GoogleFonts.poppins(
-                            color: Colors.white,
+                            color: primaryColor,
                             fontSize: 13,
                             fontWeight: FontWeight.w600)),
                     const Spacer(),
                     Text('$currentPressure hPa',
                         style: GoogleFonts.poppins(
-                            color: Colors.white54, fontSize: 12)),
+                            color: secondaryColor, fontSize: 12)),
                   ],
                 ),
                 const SizedBox(height: 2),
@@ -83,7 +88,7 @@ class PressureTrendCard extends StatelessWidget {
                       Text(
                         '${pressureChange > 0 ? '+' : ''}${pressureChange.round()} hPa',
                         style: GoogleFonts.poppins(
-                            color: Colors.white30, fontSize: 10),
+                            color: hintColor, fontSize: 10),
                       ),
                     ],
                   ],
@@ -91,7 +96,7 @@ class PressureTrendCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(forecast,
                     style: GoogleFonts.poppins(
-                        color: Colors.white38, fontSize: 11)),
+                        color: hintColor, fontSize: 11)),
               ],
             ),
           ),

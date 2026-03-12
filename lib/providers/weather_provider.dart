@@ -38,6 +38,14 @@ class WeatherProvider extends ChangeNotifier {
 
   bool get isFavorite => _favoriteCities.contains(_currentCity);
 
+  List<Color> get backgroundGradient => _isDarkMode
+      ? [const Color(0xFF0A0E1A), const Color(0xFF0F172A), const Color(0xFF1E293B)]
+      : [const Color(0xFFF8FAFC), const Color(0xFFF1F5F9), const Color(0xFFE2E8F0)];
+
+  Color get primaryTextColor => _isDarkMode ? Colors.white : const Color(0xFF0F172A);
+  Color get secondaryTextColor => _isDarkMode ? Colors.white70 : const Color(0xFF64748B);
+  Color get cardBgColor => _isDarkMode ? Colors.white.withOpacity(0.12) : Colors.white.withOpacity(0.85);
+
   String get currentCondition =>
       _currentWeather?['weather']?[0]?['main'] ?? 'Clear';
 

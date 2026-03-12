@@ -106,7 +106,7 @@ class _HomeScreenState extends State<HomeScreen>
   Widget build(BuildContext context) {
     return Consumer<WeatherProvider>(
       builder: (context, provider, _) {
-        final gradient = provider.weatherGradient;
+        final gradient = provider.backgroundGradient;
         return Scaffold(
           body: AnimatedContainer(
             duration: const Duration(seconds: 1),
@@ -202,22 +202,22 @@ class _HomeScreenState extends State<HomeScreen>
                 style: GoogleFonts.poppins(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: provider.primaryTextColor,
                 ),
               ),
               Text(
                 DateFormat('EEEE, MMM d').format(DateTime.now()),
                 style: GoogleFonts.poppins(
                   fontSize: 12,
-                  color: Colors.white60,
+                  color: provider.secondaryTextColor,
                 ),
               ),
             ],
           ),
           const Spacer(),
           IconButton(
-            icon: const Icon(Icons.my_location_rounded,
-                color: Colors.white, size: 22),
+            icon: Icon(Icons.my_location_rounded,
+                color: provider.primaryTextColor, size: 22),
             onPressed: () => provider.useCurrentLocation(),
             tooltip: 'Use GPS location',
           ),
@@ -227,21 +227,21 @@ class _HomeScreenState extends State<HomeScreen>
                   ? Icons.favorite_rounded
                   : Icons.favorite_border_rounded,
               color:
-                  provider.isFavorite ? Colors.redAccent : Colors.white,
+                  provider.isFavorite ? Colors.redAccent : provider.primaryTextColor,
               size: 22,
             ),
             onPressed: () => provider.toggleFavorite(),
             tooltip: 'Toggle favorite',
           ),
           IconButton(
-            icon: const Icon(Icons.share_rounded,
-                color: Colors.white, size: 20),
+            icon: Icon(Icons.share_rounded,
+                color: provider.primaryTextColor, size: 20),
             onPressed: () => _shareWeather(provider),
             tooltip: 'Share weather',
           ),
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
-            color: const Color(0xFF1e1e2e),
+            icon: Icon(Icons.more_vert_rounded, color: provider.primaryTextColor),
+            color: provider.isDarkMode ? const Color(0xFF1e1e2e) : Colors.white,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             onSelected: (value) {
@@ -301,9 +301,9 @@ class _HomeScreenState extends State<HomeScreen>
       value: value,
       child: Row(
         children: [
-          Icon(icon, color: Colors.white70, size: 20),
+          Icon(icon, size: 20),
           const SizedBox(width: 12),
-          Text(text, style: const TextStyle(color: Colors.white)),
+          Text(text),
         ],
       ),
     );
@@ -318,16 +318,16 @@ class _HomeScreenState extends State<HomeScreen>
         borderRadius: 30,
         child: Row(
           children: [
-            const Icon(Icons.search, color: Colors.white54, size: 20),
+            Icon(Icons.search, color: provider.secondaryTextColor, size: 20),
             const SizedBox(width: 8),
             Expanded(
               child: TextField(
                 controller: _searchController,
-                style: GoogleFonts.poppins(color: Colors.white, fontSize: 15),
+                style: GoogleFonts.poppins(color: provider.primaryTextColor, fontSize: 15),
                 decoration: InputDecoration(
                   hintText: 'Search city...',
                   hintStyle:
-                      GoogleFonts.poppins(color: Colors.white38, fontSize: 15),
+                      GoogleFonts.poppins(color: provider.secondaryTextColor, fontSize: 15),
                   border: InputBorder.none,
                 ),
                 onChanged: (v) => _onSearchChanged(v, provider),
@@ -335,8 +335,8 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.arrow_forward_rounded,
-                  color: Colors.white70),
+              icon: Icon(Icons.arrow_forward_rounded,
+                  color: provider.secondaryTextColor),
               onPressed: () => _searchCity(provider),
             ),
           ],
@@ -349,9 +349,9 @@ class _HomeScreenState extends State<HomeScreen>
     return Container(
       margin: const EdgeInsets.only(top: 4),
       decoration: BoxDecoration(
-        color: Colors.black54,
+        color: provider.isDarkMode ? Colors.black54 : Colors.white.withOpacity(0.9),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: provider.isDarkMode ? Colors.white12 : Colors.black12),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -363,15 +363,15 @@ class _HomeScreenState extends State<HomeScreen>
               [if (state.isNotEmpty) state, country].join(', ');
           return ListTile(
             dense: true,
-            leading: const Icon(Icons.location_on_outlined,
-                color: Colors.white38, size: 18),
+            leading: Icon(Icons.location_on_outlined,
+                color: provider.secondaryTextColor, size: 18),
             title: Text(name,
                 style: GoogleFonts.poppins(
-                    color: Colors.white, fontSize: 14)),
+                    color: provider.primaryTextColor, fontSize: 14)),
             subtitle: subtitle.isNotEmpty
                 ? Text(subtitle,
                     style: GoogleFonts.poppins(
-                        color: Colors.white30, fontSize: 11))
+                        color: provider.secondaryTextColor, fontSize: 11))
                 : null,
             onTap: () {
               _searchController.text = name;
@@ -491,7 +491,7 @@ class _HomeScreenState extends State<HomeScreen>
             style: GoogleFonts.poppins(
               fontSize: 76,
               fontWeight: FontWeight.w200,
-              color: Colors.white,
+              color: provider.primaryTextColor,
               height: 1.1,
             ),
           ),
@@ -500,18 +500,18 @@ class _HomeScreenState extends State<HomeScreen>
             style: GoogleFonts.poppins(
               fontSize: 18,
               fontWeight: FontWeight.w400,
-              color: Colors.white70,
+              color: provider.secondaryTextColor,
             ),
           ),
           const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _infoChip(Icons.thermostat_outlined, 'Feels $feelsLike'),
+              _infoChip(Icons.thermostat_outlined, 'Feels $feelsLike', provider),
               const SizedBox(width: 12),
-              _infoChip(Icons.arrow_upward_rounded, 'H: $high'),
+              _infoChip(Icons.arrow_upward_rounded, 'H: $high', provider),
               const SizedBox(width: 12),
-              _infoChip(Icons.arrow_downward_rounded, 'L: $low'),
+              _infoChip(Icons.arrow_downward_rounded, 'L: $low', provider),
             ],
           ),
         ],
@@ -519,21 +519,21 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _infoChip(IconData icon, String text) {
+  Widget _infoChip(IconData icon, String text, WeatherProvider provider) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.12),
+        color: provider.cardBgColor,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: Colors.white60, size: 14),
+          Icon(icon, color: provider.secondaryTextColor, size: 14),
           const SizedBox(width: 4),
           Text(text,
               style: GoogleFonts.poppins(
-                  color: Colors.white70, fontSize: 12)),
+                  color: provider.secondaryTextColor, fontSize: 12)),
         ],
       ),
     );
@@ -547,7 +547,7 @@ class _HomeScreenState extends State<HomeScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle('Hourly Forecast', Icons.access_time_rounded),
+        _sectionTitle('Hourly Forecast', Icons.access_time_rounded, provider),
         const SizedBox(height: 12),
         SizedBox(
           height: 130,
@@ -578,19 +578,19 @@ class _HomeScreenState extends State<HomeScreen>
                       Text(
                         isFirst ? 'Now' : time,
                         style: GoogleFonts.poppins(
-                          color: isFirst ? Colors.white : Colors.white60,
+                          color: isFirst ? provider.primaryTextColor : provider.secondaryTextColor,
                           fontSize: 13,
                           fontWeight:
                               isFirst ? FontWeight.w600 : FontWeight.w400,
                         ),
                       ),
                       const SizedBox(height: 10),
-                      Icon(icon, color: Colors.white, size: 28),
+                      Icon(icon, color: provider.primaryTextColor, size: 28),
                       const SizedBox(height: 10),
                       Text(
                         temp,
                         style: GoogleFonts.poppins(
-                          color: Colors.white,
+                          color: provider.primaryTextColor,
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                         ),
@@ -617,7 +617,7 @@ class _HomeScreenState extends State<HomeScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle('5-Day Forecast', Icons.calendar_month_rounded),
+        _sectionTitle('5-Day Forecast', Icons.calendar_month_rounded, provider),
         const SizedBox(height: 12),
         GlassContainer(
           child: Column(
@@ -643,7 +643,7 @@ class _HomeScreenState extends State<HomeScreen>
                 children: [
                   if (entry.key > 0)
                     Divider(
-                        color: Colors.white.withOpacity(0.08), height: 1),
+                        color: provider.primaryTextColor.withOpacity(0.1), height: 1),
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     child: Row(
@@ -653,13 +653,13 @@ class _HomeScreenState extends State<HomeScreen>
                           child: Text(
                             entry.key == 0 ? 'Tomorrow' : dayName.substring(0, 3),
                             style: GoogleFonts.poppins(
-                              color: Colors.white,
+                              color: provider.primaryTextColor,
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
-                        Icon(icon, color: Colors.white70, size: 22),
+                        Icon(icon, color: provider.secondaryTextColor, size: 22),
                         const SizedBox(width: 8),
                         SizedBox(
                           width: 36,
@@ -677,7 +677,7 @@ class _HomeScreenState extends State<HomeScreen>
                         Text(
                           provider.formatTemp(low),
                           style: GoogleFonts.poppins(
-                            color: Colors.white38,
+                            color: provider.secondaryTextColor,
                             fontSize: 14,
                           ),
                         ),
@@ -690,7 +690,7 @@ class _HomeScreenState extends State<HomeScreen>
                         Text(
                           provider.formatTemp(high),
                           style: GoogleFonts.poppins(
-                            color: Colors.white,
+                            color: provider.primaryTextColor,
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -781,7 +781,7 @@ class _HomeScreenState extends State<HomeScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle('Weather Details', Icons.dashboard_rounded),
+        _sectionTitle('Weather Details', Icons.dashboard_rounded, provider),
         const SizedBox(height: 12),
         GridView.builder(
           shrinkWrap: true,
@@ -804,12 +804,12 @@ class _HomeScreenState extends State<HomeScreen>
                   Row(
                     children: [
                       Icon(d['icon'] as IconData,
-                          color: Colors.white54, size: 16),
+                          color: provider.secondaryTextColor, size: 16),
                       const SizedBox(width: 6),
                       Text(
                         d['label'] as String,
                         style: GoogleFonts.poppins(
-                          color: Colors.white54,
+                          color: provider.secondaryTextColor,
                           fontSize: 12,
                         ),
                       ),
@@ -819,7 +819,7 @@ class _HomeScreenState extends State<HomeScreen>
                   Text(
                     d['value'] as String,
                     style: GoogleFonts.poppins(
-                      color: Colors.white,
+                      color: provider.primaryTextColor,
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
                     ),
@@ -844,7 +844,7 @@ class _HomeScreenState extends State<HomeScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle('Air Quality', Icons.air_rounded),
+        _sectionTitle('Air Quality', Icons.air_rounded, provider),
         const SizedBox(height: 12),
         GlassContainer(
           child: Column(
@@ -887,7 +887,7 @@ class _HomeScreenState extends State<HomeScreen>
                         Text(
                           WeatherUtils.getAQIDescription(aqi),
                           style: GoogleFonts.poppins(
-                            color: Colors.white54,
+                            color: provider.secondaryTextColor,
                             fontSize: 12,
                           ),
                         ),
@@ -901,7 +901,7 @@ class _HomeScreenState extends State<HomeScreen>
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
                   value: aqi / 5,
-                  backgroundColor: Colors.white.withOpacity(0.1),
+                  backgroundColor: provider.primaryTextColor.withOpacity(0.1),
                   color: color,
                   minHeight: 6,
                 ),
@@ -915,9 +915,9 @@ class _HomeScreenState extends State<HomeScreen>
                       label: Text('Details',
                           style: GoogleFonts.poppins(fontSize: 13)),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
+                        foregroundColor: provider.primaryTextColor,
                         side:
-                            BorderSide(color: Colors.white.withOpacity(0.2)),
+                            BorderSide(color: provider.primaryTextColor.withOpacity(0.3)),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(vertical: 10),
@@ -943,9 +943,9 @@ class _HomeScreenState extends State<HomeScreen>
                       label: Text('Weather Map',
                           style: GoogleFonts.poppins(fontSize: 13)),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
+                        foregroundColor: provider.primaryTextColor,
                         side:
-                            BorderSide(color: Colors.white.withOpacity(0.2)),
+                            BorderSide(color: provider.primaryTextColor.withOpacity(0.3)),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(vertical: 10),
@@ -983,7 +983,7 @@ class _HomeScreenState extends State<HomeScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle('Temperature Trend', Icons.show_chart_rounded),
+        _sectionTitle('Temperature Trend', Icons.show_chart_rounded, provider),
         const SizedBox(height: 12),
         GlassContainer(
           child: TemperatureChart(
@@ -1049,7 +1049,7 @@ class _HomeScreenState extends State<HomeScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle('Suggestions', Icons.tips_and_updates_rounded),
+        _sectionTitle('Suggestions', Icons.tips_and_updates_rounded, provider),
         const SizedBox(height: 12),
         ...suggestions.map(
           (s) => Padding(
@@ -1062,18 +1062,18 @@ class _HomeScreenState extends State<HomeScreen>
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
+                      color: provider.cardBgColor,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(s['icon'] as IconData,
-                        color: Colors.white70, size: 22),
+                        color: provider.secondaryTextColor, size: 22),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Text(
                       s['text'] as String,
                       style: GoogleFonts.poppins(
-                        color: Colors.white.withOpacity(0.85),
+                        color: provider.primaryTextColor,
                         fontSize: 13,
                         fontWeight: FontWeight.w400,
                       ),
@@ -1148,21 +1148,21 @@ class _HomeScreenState extends State<HomeScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.cloud_off_rounded,
-                size: 80, color: Colors.white.withOpacity(0.3)),
+                size: 80, color: provider.secondaryTextColor),
             const SizedBox(height: 20),
             Text(
               'Something went wrong',
               style: GoogleFonts.poppins(
                 fontSize: 22,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: provider.primaryTextColor,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               provider.error ?? 'Unknown error',
               style: GoogleFonts.poppins(
-                  color: Colors.white54, fontSize: 14),
+                  color: provider.secondaryTextColor, fontSize: 14),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 28),
@@ -1170,8 +1170,8 @@ class _HomeScreenState extends State<HomeScreen>
               icon: const Icon(Icons.refresh_rounded),
               label: Text('Try Again', style: GoogleFonts.poppins()),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white.withOpacity(0.15),
-                foregroundColor: Colors.white,
+                backgroundColor: provider.cardBgColor,
+                foregroundColor: provider.primaryTextColor,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14)),
                 padding: const EdgeInsets.symmetric(
@@ -1186,17 +1186,17 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   // ── Helpers ──
-  Widget _sectionTitle(String title, IconData icon) {
+  Widget _sectionTitle(String title, IconData icon, WeatherProvider provider) {
     return Row(
       children: [
-        Icon(icon, color: Colors.white60, size: 18),
+        Icon(icon, color: provider.secondaryTextColor, size: 18),
         const SizedBox(width: 8),
         Text(
           title,
           style: GoogleFonts.poppins(
             fontSize: 17,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: provider.primaryTextColor,
           ),
         ),
       ],

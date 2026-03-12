@@ -14,13 +14,17 @@ class SettingsScreen extends StatelessWidget {
     Color(0xFF00BCD4),
     Color(0xFF009688),
     Color(0xFF4CAF50),
+    Color(0xFF8BC34A),
     Color(0xFFFF9800),
+    Color(0xFFFF5722),
     Color(0xFFF44336),
     Color(0xFFE91E63),
     Color(0xFF9C27B0),
+    Color(0xFF673AB7),
     Color(0xFF3F51B5),
     Color(0xFF00ACC1),
-    Color(0xFF8BC34A),
+    Color(0xFF26A69A),
+    Color(0xFF795548),
   ];
 
   @override
@@ -36,13 +40,9 @@ class SettingsScreen extends StatelessWidget {
                 style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
           ),
           body: Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  Color(0xFF0f0c29),
-                  Color(0xFF302b63),
-                  Color(0xFF24243e)
-                ],
+                colors: provider.backgroundGradient,
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -61,14 +61,14 @@ class SettingsScreen extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
+                              color: provider.cardBgColor,
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Icon(
                               provider.isDarkMode
                                   ? Icons.dark_mode_rounded
                                   : Icons.light_mode_rounded,
-                              color: Colors.white70,
+                              color: provider.primaryTextColor,
                               size: 22,
                             ),
                           ),
@@ -79,17 +79,19 @@ class SettingsScreen extends StatelessWidget {
                                   CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Dark Mode',
+                                  provider.isDarkMode ? 'Dark Mode' : 'Light Mode',
                                   style: GoogleFonts.poppins(
-                                    color: Colors.white,
+                                    color: provider.primaryTextColor,
                                     fontSize: 15,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
                                 Text(
-                                  'Switch between dark and light theme',
+                                  provider.isDarkMode
+                                      ? 'Dark theme — easy on the eyes'
+                                      : 'Light theme — bright and clear',
                                   style: GoogleFonts.poppins(
-                                    color: Colors.white38,
+                                    color: provider.secondaryTextColor,
                                     fontSize: 12,
                                   ),
                                 ),
@@ -311,18 +313,25 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Widget _buildSectionLabel(String text) {
-    return Text(
-      text,
-      style: GoogleFonts.poppins(
-        color: Colors.white,
-        fontSize: 17,
-        fontWeight: FontWeight.w600,
+    return Consumer<WeatherProvider>(
+      builder: (context, provider, _) => Text(
+        text,
+        style: GoogleFonts.poppins(
+          color: provider.primaryTextColor,
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
 
   Widget _divider() {
-    return Divider(color: Colors.white.withOpacity(0.08), height: 1);
+    return Consumer<WeatherProvider>(
+      builder: (context, provider, _) => Divider(
+        color: provider.primaryTextColor.withOpacity(0.15),
+        height: 1,
+      ),
+    );
   }
 
   Widget _buildUnitTile(
