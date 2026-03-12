@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -292,6 +293,8 @@ class _CompareScreenState extends State<CompareScreen> {
           const SizedBox(height: 20),
           _buildDetailComparison(),
           const SizedBox(height: 16),
+          _buildBarCharts(),
+          const SizedBox(height: 16),
           _buildMapToggle(),
           if (_showMap) ...[
             const SizedBox(height: 12),
@@ -446,6 +449,178 @@ class _CompareScreenState extends State<CompareScreen> {
       ),
     );
   }
+
+  Widget _buildBarCharts() {
+    final w1 = _weather1!;
+    final w2 = _weather2!;
+    final name1 = w1['name'] ?? 'City 1';
+    final name2 = w2['name'] ?? 'City 2';
+
+    final metrics = [
+      {
+        'label': 'Humidity',
+        'unit': '%',
+        'v1': (w1['main']['humidity'] as num).toDouble(),
+        'v2': (w2['main']['humidity'] as num).toDouble(),
+        'max': 100.0,
+        'color1': const Color(0xFF42A5F5),
+        'color2': const Color(0xFF26C6DA),
+      },
+      {
+        'label': 'Wind',
+        'unit': 'm/s',
+        'v1': (w1['wind']['speed'] as num).toDouble(),
+        'v2': (w2['wind']['speed'] as num).toDouble(),
+        'max': null,
+        'color1': const Color(0xFF66BB6A),
+        'color2': const Color(0xFFAED581),
+      },
+      {
+        'label': 'AQI',
+        'unit': '',
+        'v1': (_aqi1 ?? 0).toDouble(),
+        'v2': (_aqi2 ?? 0).toDouble(),
+        'max': 5.0,
+        'color1': WeatherUtils.getAQISeverityColor(_aqi1 ?? 1),
+        'color2': WeatherUtils.getAQISeverityColor(_aqi2 ?? 1),
+      },
+    ];
+
+    return GlassContainer(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Visual Comparison',
+              style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Row(children: [
+            _dot(const Color(0xFF42A5F5)),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(name1,
+                  style: GoogleFonts.poppins(
+                      color: Colors.white70, fontSize: 11),
+                  overflow: TextOverflow.ellipsis),
+            ),
+            const SizedBox(width: 16),
+            _dot(const Color(0xFF26C6DA)),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(name2,
+                  style: GoogleFonts.poppins(
+                      color: Colors.white70, fontSize: 11),
+                  overflow: TextOverflow.ellipsis),
+            ),
+          ]),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 180,
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                barTouchData: BarTouchData(
+                  touchTooltipData: BarTouchTooltipData(
+                    tooltipBgColor: Colors.black87,
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      final m = metrics[groupIndex];
+                      final val = rodIndex == 0 ? m['v1'] : m['v2'];
+                      final city = rodIndex == 0 ? name1 : name2;
+                      return BarTooltipItem(
+                        '$city\n${(val as double).toStringAsFixed(1)} ${m['unit']}',
+                        GoogleFonts.poppins(color: Colors.white, fontSize: 11),
+                      );
+                    },
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  leftTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 28,
+                      getTitlesWidget: (value, _) {
+                        final idx = value.toInt();
+                        if (idx < 0 || idx >= metrics.length) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            metrics[idx]['label'] as String,
+                            style: GoogleFonts.poppins(
+                                color: Colors.white54, fontSize: 10),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                gridData: FlGridData(
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (_) => const FlLine(
+                    color: Colors.white12,
+                    strokeWidth: 0.8,
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                barGroups: List.generate(metrics.length, (i) {
+                  final m = metrics[i];
+                  final v1 = m['v1'] as double;
+                  final v2 = m['v2'] as double;
+                  final maxVal = m['max'] as double? ??
+                      math.max(v1, v2) * 1.3;
+                  return BarChartGroupData(
+                    x: i,
+                    barRods: [
+                      BarChartRodData(
+                        toY: v1,
+                        color: m['color1'] as Color,
+                        width: 18,
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(6)),
+                        backDrawRodData: BackgroundBarChartRodData(
+                          show: true,
+                          toY: maxVal,
+                          color: Colors.white.withOpacity(0.05),
+                        ),
+                      ),
+                      BarChartRodData(
+                        toY: v2,
+                        color: m['color2'] as Color,
+                        width: 18,
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(6)),
+                        backDrawRodData: BackgroundBarChartRodData(
+                          show: true,
+                          toY: maxVal,
+                          color: Colors.white.withOpacity(0.05),
+                        ),
+                      ),
+                    ],
+                    barsSpace: 6,
+                  );
+                }),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dot(Color color) => Container(
+        width: 10,
+        height: 10,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      );
 
   Widget _buildMapToggle() {
     return GestureDetector(

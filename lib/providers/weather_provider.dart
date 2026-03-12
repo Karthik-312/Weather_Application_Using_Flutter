@@ -38,9 +38,42 @@ class WeatherProvider extends ChangeNotifier {
 
   bool get isFavorite => _favoriteCities.contains(_currentCity);
 
-  List<Color> get backgroundGradient => _isDarkMode
-      ? [const Color(0xFF0A0E1A), const Color(0xFF0F172A), const Color(0xFF1E293B)]
-      : [const Color(0xFFF8FAFC), const Color(0xFFF1F5F9), const Color(0xFFE2E8F0)];
+  List<Color> get backgroundGradient {
+    final h = DateTime.now().hour;
+    if (_isDarkMode) {
+      if (h >= 5 && h < 7) {
+        return [const Color(0xFF0D1525), const Color(0xFF3D1A50), const Color(0xFFB05A2E)];
+      } else if (h >= 7 && h < 10) {
+        return [const Color(0xFF0A1628), const Color(0xFF0F2D4A), const Color(0xFF1A4D6E)];
+      } else if (h >= 10 && h < 15) {
+        return [const Color(0xFF0A1628), const Color(0xFF0F2744), const Color(0xFF1B3F6A)];
+      } else if (h >= 15 && h < 18) {
+        return [const Color(0xFF0F172A), const Color(0xFF1E2B4A), const Color(0xFF2D3A6B)];
+      } else if (h >= 18 && h < 20) {
+        return [const Color(0xFF1A0A2E), const Color(0xFF4A1A42), const Color(0xFFB05030)];
+      } else if (h >= 20 && h < 22) {
+        return [const Color(0xFF0A0618), const Color(0xFF1A0A3A), const Color(0xFF2E1A52)];
+      } else {
+        return [const Color(0xFF020408), const Color(0xFF0A0E1A), const Color(0xFF0F172A)];
+      }
+    } else {
+      if (h >= 5 && h < 7) {
+        return [const Color(0xFFFFF3E0), const Color(0xFFFFCCBC), const Color(0xFFFFAB91)];
+      } else if (h >= 7 && h < 10) {
+        return [const Color(0xFFE3F2FD), const Color(0xFFBBDEFB), const Color(0xFF90CAF9)];
+      } else if (h >= 10 && h < 15) {
+        return [const Color(0xFFE8F5FD), const Color(0xFFD1E9F7), const Color(0xFFB8D8EF)];
+      } else if (h >= 15 && h < 18) {
+        return [const Color(0xFFFFF8E1), const Color(0xFFFFF3C4), const Color(0xFFFFE082)];
+      } else if (h >= 18 && h < 20) {
+        return [const Color(0xFFFFF0E0), const Color(0xFFFFCCB0), const Color(0xFFFFAA80)];
+      } else if (h >= 20 && h < 22) {
+        return [const Color(0xFFF3E5F5), const Color(0xFFE1BEE7), const Color(0xFFCE93D8)];
+      } else {
+        return [const Color(0xFFE8EAF6), const Color(0xFFC5CAE9), const Color(0xFF9FA8DA)];
+      }
+    }
+  }
 
   Color get primaryTextColor => _isDarkMode ? Colors.white : const Color(0xFF0F172A);
   Color get secondaryTextColor => _isDarkMode ? Colors.white70 : const Color(0xFF64748B);

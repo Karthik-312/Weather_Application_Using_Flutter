@@ -11,6 +11,7 @@ import 'package:weather_app/utils/weather_utils.dart';
 import 'package:weather_app/widgets/glass_container.dart';
 import 'package:weather_app/widgets/temperature_chart.dart';
 import 'package:weather_app/widgets/animated_weather_icon.dart';
+import 'package:weather_app/widgets/weather_particles.dart';
 import 'package:weather_app/screens/air_quality_screen.dart';
 import 'package:weather_app/screens/favorites_screen.dart';
 import 'package:weather_app/screens/settings_screen.dart';
@@ -117,15 +118,22 @@ class _HomeScreenState extends State<HomeScreen>
                 end: Alignment.bottomRight,
               ),
             ),
-            child: SafeArea(
+            child: Stack(
+              children: [
+                // Particle effects overlay (rain / snow)
+                if (!provider.isLoading && provider.error == null)
+                  WeatherParticles(condition: provider.currentCondition),
+                SafeArea(
               child: provider.isLoading
                   ? _buildLoadingSkeleton()
                   : provider.error != null
                       ? _buildError(provider)
                       : RefreshIndicator(
                           onRefresh: () => provider.fetchWeather(),
-                          color: Colors.white,
-                          backgroundColor: Colors.deepPurple,
+                          color: provider.accentColor,
+                          backgroundColor: provider.isDarkMode
+                              ? const Color(0xFF1E293B)
+                              : Colors.white,
                           child: FadeTransition(
                             opacity: _fadeAnim,
                             child: SingleChildScrollView(
@@ -173,9 +181,11 @@ class _HomeScreenState extends State<HomeScreen>
                                   const SizedBox(height: 40),
                                 ],
                               ),
-                            ),
-                          ),
                         ),
+                        ),
+                        ),
+                ),
+              ],
             ),
           ),
         );
@@ -190,8 +200,8 @@ class _HomeScreenState extends State<HomeScreen>
       child: Row(
         children: [
           IconButton(
-            icon:
-                const Icon(Icons.search_rounded, color: Colors.white, size: 26),
+            icon: Icon(Icons.search_rounded,
+                color: provider.primaryTextColor, size: 26),
             onPressed: () => setState(() => _showSearch = !_showSearch),
           ),
           const Spacer(),
