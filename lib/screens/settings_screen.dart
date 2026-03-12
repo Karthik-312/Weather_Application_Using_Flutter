@@ -121,12 +121,12 @@ class SettingsScreen extends StatelessWidget {
                               Container(
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.1),
+                                  color: provider.cardBgColor,
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                     Icons.palette_rounded,
-                                    color: Colors.white70,
+                                    color: provider.primaryTextColor,
                                     size: 22),
                               ),
                               const SizedBox(width: 14),
@@ -137,7 +137,7 @@ class SettingsScreen extends StatelessWidget {
                                   Text(
                                     'Accent Color',
                                     style: GoogleFonts.poppins(
-                                      color: Colors.white,
+                                      color: provider.primaryTextColor,
                                       fontSize: 15,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -145,7 +145,7 @@ class SettingsScreen extends StatelessWidget {
                                   Text(
                                     'Customize the app highlight color',
                                     style: GoogleFonts.poppins(
-                                      color: Colors.white38,
+                                      color: provider.secondaryTextColor,
                                       fontSize: 12,
                                     ),
                                   ),
@@ -177,7 +177,7 @@ class SettingsScreen extends StatelessWidget {
                                     shape: BoxShape.circle,
                                     border: Border.all(
                                       color: isSelected
-                                          ? Colors.white
+                                          ? provider.primaryTextColor
                                           : Colors.transparent,
                                       width: 3,
                                     ),
@@ -244,9 +244,9 @@ class SettingsScreen extends StatelessWidget {
                                   borderRadius:
                                       BorderRadius.circular(12),
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                     Icons.cloud_rounded,
-                                    color: Colors.white,
+                                    color: provider.primaryTextColor,
                                     size: 24),
                               ),
                               const SizedBox(width: 14),
@@ -257,7 +257,7 @@ class SettingsScreen extends StatelessWidget {
                                   Text(
                                     'Weather App',
                                     style: GoogleFonts.poppins(
-                                      color: Colors.white,
+                                      color: provider.primaryTextColor,
                                       fontSize: 18,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -265,7 +265,7 @@ class SettingsScreen extends StatelessWidget {
                                   Text(
                                     'Version 3.0.0',
                                     style: GoogleFonts.poppins(
-                                        color: Colors.white38,
+                                        color: provider.secondaryTextColor,
                                         fontSize: 12),
                                   ),
                                 ],
@@ -279,7 +279,7 @@ class SettingsScreen extends StatelessWidget {
                             'moon phases, golden hour, activity suggestions, mood journaling, '
                             'travel planner, ambient sounds, weather history, and more.',
                             style: GoogleFonts.poppins(
-                              color: Colors.white60,
+                              color: provider.secondaryTextColor,
                               fontSize: 13,
                               height: 1.5,
                             ),
@@ -287,13 +287,13 @@ class SettingsScreen extends StatelessWidget {
                           const SizedBox(height: 12),
                           Row(
                             children: [
-                              const Icon(Icons.api_rounded,
-                                  color: Colors.white30, size: 16),
+                              Icon(Icons.api_rounded,
+                                  color: provider.secondaryTextColor, size: 16),
                               const SizedBox(width: 6),
                               Text(
                                 'Powered by OpenWeatherMap API',
                                 style: GoogleFonts.poppins(
-                                  color: Colors.white30,
+                                  color: provider.secondaryTextColor,
                                   fontSize: 11,
                                 ),
                               ),
@@ -347,12 +347,12 @@ class SettingsScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 14),
         child: Row(
           children: [
-            Icon(icon, color: Colors.white54, size: 20),
+            Icon(icon, color: provider.secondaryTextColor, size: 20),
             const SizedBox(width: 12),
             Text(
               label,
               style: GoogleFonts.poppins(
-                color: Colors.white,
+                color: provider.primaryTextColor,
                 fontSize: 14,
               ),
             ),
@@ -364,8 +364,7 @@ class SettingsScreen extends StatelessWidget {
                   color: provider.accentColor,
                   shape: BoxShape.circle,
                 ),
-                child:
-                    const Icon(Icons.check, color: Colors.white, size: 16),
+                child: const Icon(Icons.check, color: Colors.white, size: 16),
               ),
           ],
         ),
