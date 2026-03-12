@@ -294,20 +294,47 @@ class _WeatherHistoryScreenState extends State<WeatherHistoryScreen>
   }
 
   Widget _emptyState(String title, String subtitle) {
+    final provider = context.read<WeatherProvider>();
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.history_rounded,
-              size: 60, color: Colors.white.withOpacity(0.1)),
-          const SizedBox(height: 12),
-          Text(title,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 48),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: provider.accentColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.history_rounded,
+                size: 48,
+                color: provider.accentColor.withOpacity(0.4),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              title,
               style: GoogleFonts.poppins(
-                  color: Colors.white30, fontSize: 15)),
-          Text(subtitle,
+                color: provider.primaryTextColor,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
               style: GoogleFonts.poppins(
-                  color: Colors.white24, fontSize: 12)),
-        ],
+                color: provider.secondaryTextColor,
+                fontSize: 13,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

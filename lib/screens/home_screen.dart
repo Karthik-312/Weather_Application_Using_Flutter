@@ -13,15 +13,13 @@ import 'package:weather_app/widgets/temperature_chart.dart';
 import 'package:weather_app/widgets/animated_weather_icon.dart';
 import 'package:weather_app/widgets/weather_particles.dart';
 import 'package:weather_app/screens/air_quality_screen.dart';
-import 'package:weather_app/screens/favorites_screen.dart';
 import 'package:weather_app/screens/settings_screen.dart';
 import 'package:weather_app/screens/weather_map_screen.dart';
-import 'package:weather_app/screens/compare_screen.dart';
-import 'package:weather_app/screens/world_feed_screen.dart';
 import 'package:weather_app/screens/mood_journal_screen.dart';
 import 'package:weather_app/screens/travel_planner_screen.dart';
 import 'package:weather_app/screens/weather_history_screen.dart';
 import 'package:weather_app/screens/ambient_sounds_screen.dart';
+import 'package:weather_app/utils/page_routes.dart';
 import 'package:weather_app/widgets/astronomy_card.dart';
 import 'package:weather_app/widgets/activity_suggestions_card.dart';
 import 'package:weather_app/widgets/pressure_trend_card.dart';
@@ -225,29 +223,50 @@ class _HomeScreenState extends State<HomeScreen>
             ],
           ),
           const Spacer(),
-          IconButton(
-            icon: Icon(Icons.my_location_rounded,
-                color: provider.primaryTextColor, size: 22),
-            onPressed: () => provider.useCurrentLocation(),
-            tooltip: 'Use GPS location',
-          ),
-          IconButton(
-            icon: Icon(
-              provider.isFavorite
-                  ? Icons.favorite_rounded
-                  : Icons.favorite_border_rounded,
-              color:
-                  provider.isFavorite ? Colors.redAccent : provider.primaryTextColor,
-              size: 22,
+          Semantics(
+            label: 'Use current GPS location',
+            child: IconButton(
+              icon: Icon(Icons.my_location_rounded,
+                  color: provider.primaryTextColor, size: 22),
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                provider.useCurrentLocation();
+              },
+              tooltip: 'Use GPS location',
             ),
-            onPressed: () => provider.toggleFavorite(),
-            tooltip: 'Toggle favorite',
           ),
-          IconButton(
-            icon: Icon(Icons.share_rounded,
-                color: provider.primaryTextColor, size: 20),
-            onPressed: () => _shareWeather(provider),
-            tooltip: 'Share weather',
+          Semantics(
+            label: provider.isFavorite
+                ? 'Remove from favorites'
+                : 'Add to favorites',
+            child: IconButton(
+              icon: Icon(
+                provider.isFavorite
+                    ? Icons.favorite_rounded
+                    : Icons.favorite_border_rounded,
+                color: provider.isFavorite
+                    ? Colors.redAccent
+                    : provider.primaryTextColor,
+                size: 22,
+              ),
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                provider.toggleFavorite();
+              },
+              tooltip: 'Toggle favorite',
+            ),
+          ),
+          Semantics(
+            label: 'Share weather',
+            child: IconButton(
+              icon: Icon(Icons.share_rounded,
+                  color: provider.primaryTextColor, size: 20),
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                _shareWeather(provider);
+              },
+              tooltip: 'Share weather',
+            ),
           ),
           PopupMenuButton<String>(
             icon: Icon(Icons.more_vert_rounded, color: provider.primaryTextColor),
@@ -255,18 +274,9 @@ class _HomeScreenState extends State<HomeScreen>
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             onSelected: (value) {
-              Widget? screen;
               HapticFeedback.lightImpact();
+              Widget? screen;
               switch (value) {
-                case 'favorites':
-                  screen = const FavoritesScreen();
-                  break;
-                case 'compare':
-                  screen = const CompareScreen();
-                  break;
-                case 'world':
-                  screen = const WorldFeedScreen();
-                  break;
                 case 'mood':
                   screen = const MoodJournalScreen();
                   break;
@@ -285,14 +295,10 @@ class _HomeScreenState extends State<HomeScreen>
                   break;
               }
               if (screen != null) {
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => screen!));
+                Navigator.push(context, PageRoutes.slide(screen));
               }
             },
             itemBuilder: (context) => [
-              _buildPopupItem(Icons.favorite_rounded, 'Favorites', 'favorites'),
-              _buildPopupItem(Icons.compare_arrows_rounded, 'Compare Cities', 'compare'),
-              _buildPopupItem(Icons.public_rounded, 'World Weather', 'world'),
               _buildPopupItem(Icons.book_rounded, 'Mood Journal', 'mood'),
               _buildPopupItem(Icons.flight_takeoff_rounded, 'Travel Planner', 'travel'),
               _buildPopupItem(Icons.history_rounded, 'Data & History', 'history'),
@@ -496,21 +502,27 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            temp,
-            style: GoogleFonts.poppins(
-              fontSize: 76,
-              fontWeight: FontWeight.w200,
-              color: provider.primaryTextColor,
-              height: 1.1,
+          Semantics(
+            label: 'Temperature: $temp',
+            child: Text(
+              temp,
+              style: GoogleFonts.poppins(
+                fontSize: 76,
+                fontWeight: FontWeight.w200,
+                color: provider.primaryTextColor,
+                height: 1.1,
+              ),
             ),
           ),
-          Text(
-            description,
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w400,
-              color: provider.secondaryTextColor,
+          Semantics(
+            label: 'Weather condition: $description',
+            child: Text(
+              description,
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w400,
+                color: provider.secondaryTextColor,
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -933,16 +945,12 @@ class _HomeScreenState extends State<HomeScreen>
                         padding: const EdgeInsets.symmetric(vertical: 10),
                       ),
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => AirQualityScreen(
-                              airQualityData: provider.aqiComponents,
-                              aqi: aqi,
-                              cityName: provider.currentCity,
-                            ),
-                          ),
-                        );
+                        HapticFeedback.lightImpact();
+                        Navigator.push(context, PageRoutes.slide(AirQualityScreen(
+                          airQualityData: provider.aqiComponents,
+                          aqi: aqi,
+                          cityName: provider.currentCity,
+                        )));
                       },
                     ),
                   ),
@@ -962,16 +970,12 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                       onPressed: () {
                         if (provider.lat != null && provider.lon != null) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => WeatherMapScreen(
-                                lat: provider.lat!,
-                                lon: provider.lon!,
-                                cityName: provider.currentCity,
-                              ),
-                            ),
-                          );
+                          HapticFeedback.lightImpact();
+                          Navigator.push(context, PageRoutes.slide(WeatherMapScreen(
+                            lat: provider.lat!,
+                            lon: provider.lon!,
+                            cityName: provider.currentCity,
+                          )));
                         }
                       },
                     ),

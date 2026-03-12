@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:weather_app/providers/weather_provider.dart';
 import 'package:weather_app/services/storage_service.dart';
-import 'package:weather_app/screens/home_screen.dart';
+import 'package:weather_app/screens/main_screen.dart';
 import 'package:weather_app/screens/onboarding_screen.dart';
 
 void main() async {
@@ -51,7 +51,7 @@ class MyApp extends StatelessWidget {
           ),
           home: showOnboarding
               ? const OnboardingScreen()
-              : const HomeScreen(),
+              : const MainScreen(),
         );
       },
     );

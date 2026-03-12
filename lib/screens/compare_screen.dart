@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -9,6 +10,7 @@ import 'package:provider/provider.dart';
 import 'package:weather_app/providers/weather_provider.dart';
 import 'package:weather_app/secrets.dart';
 import 'package:weather_app/services/weather_service.dart';
+import 'package:weather_app/utils/page_routes.dart';
 import 'package:weather_app/utils/weather_utils.dart';
 import 'package:weather_app/widgets/glass_container.dart';
 
@@ -137,10 +139,11 @@ class _CompareScreenState extends State<CompareScreen> {
         extendBodyBehindAppBar: true,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
+          automaticallyImplyLeading: false,
           elevation: 0,
           title: Text('Compare Weather',
               style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                   color: provider.primaryTextColor)),
         ),
         body: Container(
@@ -260,6 +263,13 @@ class _CompareScreenState extends State<CompareScreen> {
     );
   }
 
+  Widget _buildSkeletonCard() {
+    return GlassContainer(
+      padding: const EdgeInsets.all(16),
+      child: _SkeletonLoader(),
+    );
+  }
+
   Widget _buildPlaceholder() {
     return Padding(
       padding: const EdgeInsets.only(top: 80),
@@ -308,13 +318,7 @@ class _CompareScreenState extends State<CompareScreen> {
   Widget _buildWeatherCard(
       Map<String, dynamic>? weather, String? error, bool loading) {
     if (loading) {
-      return const GlassContainer(
-        child: Center(
-            child: Padding(
-          padding: EdgeInsets.all(40),
-          child: CircularProgressIndicator(color: Colors.white54),
-        )),
-      );
+      return _buildSkeletonCard();
     }
     if (error != null) {
       return GlassContainer(
@@ -877,18 +881,14 @@ class _CompareScreenState extends State<CompareScreen> {
   }
 
   void _showFullScreenMap(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (ctx) => _FullScreenCompareMap(
-          weather1: _weather1!,
-          weather2: _weather2!,
-          aqi1: _aqi1,
-          aqi2: _aqi2,
-          buildMarker: _buildCityMarker,
-        ),
-      ),
-    );
+    HapticFeedback.lightImpact();
+    Navigator.of(context).push(PageRoutes.slideUp(_FullScreenCompareMap(
+      weather1: _weather1!,
+      weather2: _weather2!,
+      aqi1: _aqi1,
+      aqi2: _aqi2,
+      buildMarker: _buildCityMarker,
+    )));
   }
 }
 
@@ -1002,7 +1002,10 @@ class _FullScreenCompareMapState extends State<_FullScreenCompareMap> {
   Widget _buildLayerChip(String key, String label) {
     final active = _mapLayer == key;
     return GestureDetector(
-      onTap: () => setState(() => _mapLayer = key),
+      onTap: () {
+        HapticFeedback.lightImpact();
+        setState(() => _mapLayer = key);
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
@@ -1011,6 +1014,90 @@ class _FullScreenCompareMapState extends State<_FullScreenCompareMap> {
         ),
         child: Text(label, style: GoogleFonts.poppins(fontSize: 12, color: active ? Colors.white : Colors.white54)),
       ),
+    );
+  }
+}
+
+class _SkeletonLoader extends StatefulWidget {
+  @override
+  State<_SkeletonLoader> createState() => _SkeletonLoaderState();
+}
+
+class _SkeletonLoaderState extends State<_SkeletonLoader>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _anim = Tween<double>(begin: 0.3, end: 0.7).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (_, __) {
+        final c = Colors.white.withOpacity(_anim.value);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: c,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+                width: 80, height: 32,
+                decoration: BoxDecoration(
+                    color: c, borderRadius: BorderRadius.circular(8))),
+            const SizedBox(height: 8),
+            Container(
+                width: 100, height: 14,
+                decoration: BoxDecoration(
+                    color: c, borderRadius: BorderRadius.circular(6))),
+            const SizedBox(height: 16),
+            ...List.generate(
+              3,
+              (i) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                        width: 60, height: 12,
+                        decoration: BoxDecoration(
+                            color: c,
+                            borderRadius: BorderRadius.circular(4))),
+                    Container(
+                        width: 40, height: 12,
+                        decoration: BoxDecoration(
+                            color: c,
+                            borderRadius: BorderRadius.circular(4))),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:weather_app/services/storage_service.dart';
-import 'package:weather_app/screens/home_screen.dart';
+import 'package:weather_app/screens/main_screen.dart';
+import 'package:weather_app/utils/page_routes.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -49,7 +50,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     await StorageService.setOnboardingSeen();
     if (mounted) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        PageRoutes.fade(const MainScreen()),
       );
     }
   }

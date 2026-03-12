@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:weather_app/services/weather_service.dart';
 import 'package:weather_app/services/location_service.dart';
@@ -20,6 +21,8 @@ class WeatherProvider extends ChangeNotifier {
   Color _accentColor = const Color(0xFF6200EA);
   double _pressureChange = 0;
   int? _lastPressure;
+  DateTime? _lastFetched;
+  Timer? _backgroundTimer;
 
   String get currentCity => _currentCity;
   Map<String, dynamic>? get currentWeather => _currentWeather;
@@ -160,10 +163,27 @@ class WeatherProvider extends ChangeNotifier {
     final accentVal = await StorageService.loadAccentColor();
     _accentColor = Color(accentVal);
     await fetchWeather();
+    // Background refresh every 30 minutes
+    _backgroundTimer = Timer.periodic(const Duration(minutes: 30), (_) {
+      fetchWeather(background: true);
+    });
   }
 
-  Future<void> fetchWeather() async {
-    _isLoading = true;
+  @override
+  void dispose() {
+    _backgroundTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> fetchWeather({bool background = false}) async {
+    // Skip if data is fresh (< 10 min old) and this is a background refresh
+    if (background &&
+        _lastFetched != null &&
+        DateTime.now().difference(_lastFetched!) < const Duration(minutes: 10)) {
+      return;
+    }
+
+    _isLoading = !background;
     _error = null;
     _isOfflineData = false;
     notifyListeners();
@@ -208,6 +228,7 @@ class WeatherProvider extends ChangeNotifier {
         'wind': _currentWeather!['wind']['speed'],
         'pressure': pressure,
       });
+      _lastFetched = DateTime.now();
     } catch (e) {
       // Fallback to cached data
       final cached = await StorageService.loadCachedWeather(_currentCity);

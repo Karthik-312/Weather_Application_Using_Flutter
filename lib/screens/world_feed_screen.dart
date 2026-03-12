@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:weather_app/providers/weather_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -90,17 +91,22 @@ class _WorldFeedScreenState extends State<WorldFeedScreen> {
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
+          automaticallyImplyLeading: false,
           title: Text('World Weather',
               style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                   color: provider.primaryTextColor)),
           actions: [
-            IconButton(
-              icon: Icon(Icons.refresh_rounded, color: provider.primaryTextColor),
-              onPressed: () {
-                _weatherData.clear();
-                _fetchAllWeather();
-              },
+            Semantics(
+              label: 'Refresh world weather',
+              child: IconButton(
+                icon: Icon(Icons.refresh_rounded,               color: provider.primaryTextColor),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  _weatherData.clear();
+                  _fetchAllWeather();
+                },
+              ),
             ),
           ],
         ),
@@ -114,8 +120,7 @@ class _WorldFeedScreenState extends State<WorldFeedScreen> {
           ),
         child: SafeArea(
           child: _isLoading && _weatherData.isEmpty
-              ? const Center(
-                  child: CircularProgressIndicator(color: Colors.white54))
+              ? _buildSkeletonList()
               : RefreshIndicator(
                   onRefresh: () async {
                     _weatherData.clear();
@@ -172,7 +177,10 @@ class _WorldFeedScreenState extends State<WorldFeedScreen> {
                                         subtitle: subtitle.isNotEmpty
                                             ? Text(subtitle, style: GoogleFonts.poppins(color: Colors.white30, fontSize: 11))
                                             : null,
-                                        onTap: () => _addSearchedCity(name),
+                                        onTap: () {
+                                          HapticFeedback.lightImpact();
+                                          _addSearchedCity(name);
+                                        },
                                       );
                                     }).toList(),
                                   ),
@@ -205,27 +213,22 @@ class _WorldFeedScreenState extends State<WorldFeedScreen> {
     );
   }
 
+  Widget _buildSkeletonList() {
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      itemCount: 6,
+      itemBuilder: (_, __) => const Padding(
+        padding: EdgeInsets.only(bottom: 12),
+        child: _WorldSkeletonCard(),
+      ),
+    );
+  }
+
   Widget _buildCityCard(String city, Map<String, dynamic>? weather) {
     if (weather == null) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: GlassContainer(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Text(city,
-                  style: GoogleFonts.poppins(
-                      color: Colors.white54, fontSize: 15)),
-              const Spacer(),
-              const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white30),
-              ),
-            ],
-          ),
-        ),
+      return const Padding(
+        padding: EdgeInsets.only(bottom: 10),
+        child: _WorldSkeletonCard(),
       );
     }
 
@@ -240,69 +243,161 @@ class _WorldFeedScreenState extends State<WorldFeedScreen> {
     final wind = weather['wind']['speed'];
     final gradient = WeatherUtils.getWeatherGradient(condition, false);
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            colors: [
-              gradient.first.withOpacity(0.5),
-              gradient.last.withOpacity(0.3),
-            ],
-          ),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(icon, size: 44, color: Colors.white),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '$city, $country',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(desc,
-                      style: GoogleFonts.poppins(
-                          color: Colors.white60, fontSize: 12)),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(Icons.water_drop, color: Colors.white38, size: 12),
-                      const SizedBox(width: 3),
-                      Text('$humidity%',
-                          style: GoogleFonts.poppins(
-                              color: Colors.white38, fontSize: 11)),
-                      const SizedBox(width: 10),
-                      Icon(Icons.air, color: Colors.white38, size: 12),
-                      const SizedBox(width: 3),
-                      Text('$wind m/s',
-                          style: GoogleFonts.poppins(
-                              color: Colors.white38, fontSize: 11)),
-                    ],
-                  ),
+    return Semantics(
+      label: '$city weather: $tempC degrees, $desc',
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: GestureDetector(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            context.read<WeatherProvider>().searchCity(city);
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                colors: [
+                  gradient.first.withOpacity(0.5),
+                  gradient.last.withOpacity(0.3),
                 ],
               ),
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
             ),
-            Text(
-              '$tempC°',
-              style: GoogleFonts.poppins(
-                color: Colors.white,
-                fontSize: 36,
-                fontWeight: FontWeight.w300,
-              ),
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Icon(icon, size: 44, color: Colors.white),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$city, $country',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(desc,
+                          style: GoogleFonts.poppins(
+                              color: Colors.white60, fontSize: 12)),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.water_drop, color: Colors.white38, size: 12),
+                          const SizedBox(width: 3),
+                          Text('$humidity%',
+                              style: GoogleFonts.poppins(
+                                  color: Colors.white38, fontSize: 11)),
+                          const SizedBox(width: 10),
+                          Icon(Icons.air, color: Colors.white38, size: 12),
+                          const SizedBox(width: 3),
+                          Text('$wind m/s',
+                              style: GoogleFonts.poppins(
+                                  color: Colors.white38, fontSize: 11)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '$tempC°',
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 36,
+                    fontWeight: FontWeight.w300,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _WorldSkeletonCard extends StatefulWidget {
+  const _WorldSkeletonCard();
+
+  @override
+  State<_WorldSkeletonCard> createState() => _WorldSkeletonCardState();
+}
+
+class _WorldSkeletonCardState extends State<_WorldSkeletonCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _anim = Tween<double>(begin: 0.15, end: 0.4).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (_, __) {
+        final c = Colors.white.withOpacity(_anim.value);
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: c,
+            border: Border.all(color: Colors.white.withOpacity(0.05)),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(_anim.value * 1.5),
+                      shape: BoxShape.circle)),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                        width: 100, height: 14,
+                        decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(_anim.value * 1.5),
+                            borderRadius: BorderRadius.circular(4))),
+                    const SizedBox(height: 8),
+                    Container(
+                        width: 70, height: 10,
+                        decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(_anim.value),
+                            borderRadius: BorderRadius.circular(4))),
+                  ],
+                ),
+              ),
+              Container(
+                  width: 48, height: 36,
+                  decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(_anim.value * 1.5),
+                      borderRadius: BorderRadius.circular(6))),
+            ],
+          ),
+        );
+      },
     );
   }
 }
