@@ -20,13 +20,9 @@ class FavoritesScreen extends StatelessWidget {
                 style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
           ),
           body: Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  Color(0xFF0f0c29),
-                  Color(0xFF302b63),
-                  Color(0xFF24243e)
-                ],
+                colors: provider.backgroundGradient,
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),

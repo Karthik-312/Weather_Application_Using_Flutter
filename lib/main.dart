@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:weather_app/providers/weather_provider.dart';
+import 'package:weather_app/services/storage_service.dart';
 import 'package:weather_app/screens/home_screen.dart';
+import 'package:weather_app/screens/onboarding_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,16 +16,20 @@ void main() async {
     ),
   );
 
+  final seenOnboarding = await StorageService.hasSeenOnboarding();
+
   runApp(
     ChangeNotifierProvider(
       create: (_) => WeatherProvider()..initialize(),
-      child: const MyApp(),
+      child: MyApp(showOnboarding: !seenOnboarding),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool showOnboarding;
+
+  const MyApp({super.key, required this.showOnboarding});
 
   @override
   Widget build(BuildContext context) {
@@ -41,9 +47,11 @@ class MyApp extends StatelessWidget {
                   ? ThemeData.dark().textTheme
                   : ThemeData.light().textTheme,
             ),
-            colorSchemeSeed: Colors.deepPurple,
+            colorSchemeSeed: provider.accentColor,
           ),
-          home: const HomeScreen(),
+          home: showOnboarding
+              ? const OnboardingScreen()
+              : const HomeScreen(),
         );
       },
     );

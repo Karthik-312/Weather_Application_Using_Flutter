@@ -1,16 +1,30 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:weather_app/providers/weather_provider.dart';
 import 'package:weather_app/utils/weather_utils.dart';
 import 'package:weather_app/widgets/glass_container.dart';
 import 'package:weather_app/widgets/temperature_chart.dart';
+import 'package:weather_app/widgets/animated_weather_icon.dart';
 import 'package:weather_app/screens/air_quality_screen.dart';
 import 'package:weather_app/screens/favorites_screen.dart';
 import 'package:weather_app/screens/settings_screen.dart';
 import 'package:weather_app/screens/weather_map_screen.dart';
+import 'package:weather_app/screens/compare_screen.dart';
+import 'package:weather_app/screens/world_feed_screen.dart';
+import 'package:weather_app/screens/mood_journal_screen.dart';
+import 'package:weather_app/screens/travel_planner_screen.dart';
+import 'package:weather_app/screens/weather_history_screen.dart';
+import 'package:weather_app/screens/ambient_sounds_screen.dart';
+import 'package:weather_app/widgets/astronomy_card.dart';
+import 'package:weather_app/widgets/activity_suggestions_card.dart';
+import 'package:weather_app/widgets/pressure_trend_card.dart';
+import 'package:weather_app/widgets/weather_trivia_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,6 +37,8 @@ class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   bool _showSearch = false;
+  List<Map<String, dynamic>> _suggestions = [];
+  Timer? _debounce;
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
 
@@ -41,7 +57,20 @@ class _HomeScreenState extends State<HomeScreen>
   void dispose() {
     _searchController.dispose();
     _animController.dispose();
+    _debounce?.cancel();
     super.dispose();
+  }
+
+  void _onSearchChanged(String query, WeatherProvider provider) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
+      if (query.length < 2) {
+        setState(() => _suggestions = []);
+        return;
+      }
+      final results = await provider.searchCitySuggestions(query);
+      if (mounted) setState(() => _suggestions = results);
+    });
   }
 
   void _searchCity(WeatherProvider provider) {
@@ -53,16 +82,31 @@ class _HomeScreenState extends State<HomeScreen>
       return;
     }
     provider.searchCity(city);
-    setState(() => _showSearch = false);
+    setState(() {
+      _showSearch = false;
+      _suggestions = [];
+    });
     _searchController.clear();
     FocusScope.of(context).unfocus();
+  }
+
+  void _shareWeather(WeatherProvider provider) {
+    final text = provider.getShareText();
+    try {
+      Share.share(text);
+    } catch (_) {
+      Clipboard.setData(ClipboardData(text: text));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Weather info copied to clipboard!')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<WeatherProvider>(
       builder: (context, provider, _) {
-        final gradient = provider.weatherGradient;
+        final gradient = provider.backgroundGradient;
         return Scaffold(
           body: AnimatedContainer(
             duration: const Duration(seconds: 1),
@@ -94,10 +138,18 @@ class _HomeScreenState extends State<HomeScreen>
                                     CrossAxisAlignment.start,
                                 children: [
                                   _buildAppBar(provider),
-                                  if (_showSearch)
+                                  if (_showSearch) ...[
                                     _buildSearchBar(provider),
+                                    if (_suggestions.isNotEmpty)
+                                      _buildSuggestionsList(provider),
+                                  ],
+                                  if (provider.isOfflineData)
+                                    _buildOfflineBanner(),
                                   const SizedBox(height: 16),
                                   _buildCurrentWeather(provider),
+                                  if (provider.rainCountdown != null)
+                                    _buildRainCountdown(
+                                        provider.rainCountdown!),
                                   const SizedBox(height: 28),
                                   _buildHourlyForecast(provider),
                                   const SizedBox(height: 28),
@@ -108,6 +160,14 @@ class _HomeScreenState extends State<HomeScreen>
                                   _buildAirQuality(provider),
                                   const SizedBox(height: 28),
                                   _buildTempChart(provider),
+                                  const SizedBox(height: 28),
+                                  _buildActivitySuggestions(provider),
+                                  const SizedBox(height: 28),
+                                  _buildAstronomy(provider),
+                                  const SizedBox(height: 28),
+                                  _buildPressureTrend(provider),
+                                  const SizedBox(height: 28),
+                                  const WeatherTriviaCard(),
                                   const SizedBox(height: 28),
                                   _buildSuggestions(provider),
                                   const SizedBox(height: 40),
@@ -142,22 +202,22 @@ class _HomeScreenState extends State<HomeScreen>
                 style: GoogleFonts.poppins(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: provider.primaryTextColor,
                 ),
               ),
               Text(
                 DateFormat('EEEE, MMM d').format(DateTime.now()),
                 style: GoogleFonts.poppins(
                   fontSize: 12,
-                  color: Colors.white60,
+                  color: provider.secondaryTextColor,
                 ),
               ),
             ],
           ),
           const Spacer(),
           IconButton(
-            icon: const Icon(Icons.my_location_rounded,
-                color: Colors.white, size: 22),
+            icon: Icon(Icons.my_location_rounded,
+                color: provider.primaryTextColor, size: 22),
             onPressed: () => provider.useCurrentLocation(),
             tooltip: 'Use GPS location',
           ),
@@ -167,35 +227,67 @@ class _HomeScreenState extends State<HomeScreen>
                   ? Icons.favorite_rounded
                   : Icons.favorite_border_rounded,
               color:
-                  provider.isFavorite ? Colors.redAccent : Colors.white,
+                  provider.isFavorite ? Colors.redAccent : provider.primaryTextColor,
               size: 22,
             ),
             onPressed: () => provider.toggleFavorite(),
             tooltip: 'Toggle favorite',
           ),
+          IconButton(
+            icon: Icon(Icons.share_rounded,
+                color: provider.primaryTextColor, size: 20),
+            onPressed: () => _shareWeather(provider),
+            tooltip: 'Share weather',
+          ),
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
-            color: const Color(0xFF1e1e2e),
+            icon: Icon(Icons.more_vert_rounded, color: provider.primaryTextColor),
+            color: provider.isDarkMode ? const Color(0xFF1e1e2e) : Colors.white,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             onSelected: (value) {
-              if (value == 'favorites') {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const FavoritesScreen()));
-              } else if (value == 'settings') {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const SettingsScreen()));
+              Widget? screen;
+              HapticFeedback.lightImpact();
+              switch (value) {
+                case 'favorites':
+                  screen = const FavoritesScreen();
+                  break;
+                case 'compare':
+                  screen = const CompareScreen();
+                  break;
+                case 'world':
+                  screen = const WorldFeedScreen();
+                  break;
+                case 'mood':
+                  screen = const MoodJournalScreen();
+                  break;
+                case 'travel':
+                  screen = const TravelPlannerScreen();
+                  break;
+                case 'history':
+                  screen = const WeatherHistoryScreen();
+                  break;
+                case 'ambient':
+                  screen = AmbientSoundsScreen(
+                      currentCondition: provider.currentCondition);
+                  break;
+                case 'settings':
+                  screen = const SettingsScreen();
+                  break;
+              }
+              if (screen != null) {
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => screen!));
               }
             },
             itemBuilder: (context) => [
-              _buildPopupItem(Icons.favorite_rounded, 'Favorite Cities',
-                  'favorites'),
-              _buildPopupItem(
-                  Icons.settings_rounded, 'Settings', 'settings'),
+              _buildPopupItem(Icons.favorite_rounded, 'Favorites', 'favorites'),
+              _buildPopupItem(Icons.compare_arrows_rounded, 'Compare Cities', 'compare'),
+              _buildPopupItem(Icons.public_rounded, 'World Weather', 'world'),
+              _buildPopupItem(Icons.book_rounded, 'Mood Journal', 'mood'),
+              _buildPopupItem(Icons.flight_takeoff_rounded, 'Travel Planner', 'travel'),
+              _buildPopupItem(Icons.history_rounded, 'Data & History', 'history'),
+              _buildPopupItem(Icons.headphones_rounded, 'Ambient Sounds', 'ambient'),
+              _buildPopupItem(Icons.settings_rounded, 'Settings', 'settings'),
             ],
           ),
         ],
@@ -209,9 +301,9 @@ class _HomeScreenState extends State<HomeScreen>
       value: value,
       child: Row(
         children: [
-          Icon(icon, color: Colors.white70, size: 20),
+          Icon(icon, size: 20),
           const SizedBox(width: 12),
-          Text(text, style: const TextStyle(color: Colors.white)),
+          Text(text),
         ],
       ),
     );
@@ -226,25 +318,131 @@ class _HomeScreenState extends State<HomeScreen>
         borderRadius: 30,
         child: Row(
           children: [
-            const Icon(Icons.search, color: Colors.white54, size: 20),
+            Icon(Icons.search, color: provider.secondaryTextColor, size: 20),
             const SizedBox(width: 8),
             Expanded(
               child: TextField(
                 controller: _searchController,
-                style: GoogleFonts.poppins(color: Colors.white, fontSize: 15),
+                style: GoogleFonts.poppins(color: provider.primaryTextColor, fontSize: 15),
                 decoration: InputDecoration(
                   hintText: 'Search city...',
                   hintStyle:
-                      GoogleFonts.poppins(color: Colors.white38, fontSize: 15),
+                      GoogleFonts.poppins(color: provider.secondaryTextColor, fontSize: 15),
                   border: InputBorder.none,
                 ),
+                onChanged: (v) => _onSearchChanged(v, provider),
                 onSubmitted: (_) => _searchCity(provider),
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.arrow_forward_rounded,
-                  color: Colors.white70),
+              icon: Icon(Icons.arrow_forward_rounded,
+                  color: provider.secondaryTextColor),
               onPressed: () => _searchCity(provider),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSuggestionsList(WeatherProvider provider) {
+    return Container(
+      margin: const EdgeInsets.only(top: 4),
+      decoration: BoxDecoration(
+        color: provider.isDarkMode ? Colors.black54 : Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: provider.isDarkMode ? Colors.white12 : Colors.black12),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: _suggestions.map((s) {
+          final name = s['name'] ?? '';
+          final country = s['country'] ?? '';
+          final state = s['state'] ?? '';
+          final subtitle =
+              [if (state.isNotEmpty) state, country].join(', ');
+          return ListTile(
+            dense: true,
+            leading: Icon(Icons.location_on_outlined,
+                color: provider.secondaryTextColor, size: 18),
+            title: Text(name,
+                style: GoogleFonts.poppins(
+                    color: provider.primaryTextColor, fontSize: 14)),
+            subtitle: subtitle.isNotEmpty
+                ? Text(subtitle,
+                    style: GoogleFonts.poppins(
+                        color: provider.secondaryTextColor, fontSize: 11))
+                : null,
+            onTap: () {
+              _searchController.text = name;
+              provider.searchCity(name);
+              setState(() {
+                _showSearch = false;
+                _suggestions = [];
+              });
+              _searchController.clear();
+              FocusScope.of(context).unfocus();
+            },
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildRainCountdown(String countdown) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: GlassContainer(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        borderRadius: 16,
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.lightBlueAccent.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.water_drop_rounded,
+                  color: Colors.lightBlueAccent, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(countdown,
+                  style: GoogleFonts.poppins(
+                      color: Colors.lightBlueAccent,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500)),
+            ),
+            const Icon(Icons.schedule_rounded,
+                color: Colors.lightBlueAccent, size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOfflineBanner() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.amber.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.amber.withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.cloud_off_rounded,
+                color: Colors.amber, size: 16),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Showing cached data — you appear to be offline',
+                style: GoogleFonts.poppins(
+                    color: Colors.amber, fontSize: 11),
+              ),
             ),
           ],
         ),
@@ -266,9 +464,6 @@ class _HomeScreenState extends State<HomeScreen>
     final condition = weather['weather'][0]['main'] as String;
     final description =
         WeatherUtils.capitalizeWords(weather['weather'][0]['description'] ?? '');
-    final icon =
-        WeatherUtils.getWeatherIcon(condition, isNight: provider.isNight);
-
     return Center(
       child: Column(
         children: [
@@ -284,7 +479,11 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
               );
             },
-            child: Icon(icon, size: 100, color: Colors.white.withOpacity(0.9)),
+            child: AnimatedWeatherIcon(
+              condition: condition,
+              isNight: provider.isNight,
+              size: 100,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
@@ -292,7 +491,7 @@ class _HomeScreenState extends State<HomeScreen>
             style: GoogleFonts.poppins(
               fontSize: 76,
               fontWeight: FontWeight.w200,
-              color: Colors.white,
+              color: provider.primaryTextColor,
               height: 1.1,
             ),
           ),
@@ -301,18 +500,18 @@ class _HomeScreenState extends State<HomeScreen>
             style: GoogleFonts.poppins(
               fontSize: 18,
               fontWeight: FontWeight.w400,
-              color: Colors.white70,
+              color: provider.secondaryTextColor,
             ),
           ),
           const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _infoChip(Icons.thermostat_outlined, 'Feels $feelsLike'),
+              _infoChip(Icons.thermostat_outlined, 'Feels $feelsLike', provider),
               const SizedBox(width: 12),
-              _infoChip(Icons.arrow_upward_rounded, 'H: $high'),
+              _infoChip(Icons.arrow_upward_rounded, 'H: $high', provider),
               const SizedBox(width: 12),
-              _infoChip(Icons.arrow_downward_rounded, 'L: $low'),
+              _infoChip(Icons.arrow_downward_rounded, 'L: $low', provider),
             ],
           ),
         ],
@@ -320,21 +519,21 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _infoChip(IconData icon, String text) {
+  Widget _infoChip(IconData icon, String text, WeatherProvider provider) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.12),
+        color: provider.cardBgColor,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: Colors.white60, size: 14),
+          Icon(icon, color: provider.secondaryTextColor, size: 14),
           const SizedBox(width: 4),
           Text(text,
               style: GoogleFonts.poppins(
-                  color: Colors.white70, fontSize: 12)),
+                  color: provider.secondaryTextColor, fontSize: 12)),
         ],
       ),
     );
@@ -348,7 +547,7 @@ class _HomeScreenState extends State<HomeScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle('Hourly Forecast', Icons.access_time_rounded),
+        _sectionTitle('Hourly Forecast', Icons.access_time_rounded, provider),
         const SizedBox(height: 12),
         SizedBox(
           height: 130,
@@ -379,19 +578,19 @@ class _HomeScreenState extends State<HomeScreen>
                       Text(
                         isFirst ? 'Now' : time,
                         style: GoogleFonts.poppins(
-                          color: isFirst ? Colors.white : Colors.white60,
+                          color: isFirst ? provider.primaryTextColor : provider.secondaryTextColor,
                           fontSize: 13,
                           fontWeight:
                               isFirst ? FontWeight.w600 : FontWeight.w400,
                         ),
                       ),
                       const SizedBox(height: 10),
-                      Icon(icon, color: Colors.white, size: 28),
+                      Icon(icon, color: provider.primaryTextColor, size: 28),
                       const SizedBox(height: 10),
                       Text(
                         temp,
                         style: GoogleFonts.poppins(
-                          color: Colors.white,
+                          color: provider.primaryTextColor,
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                         ),
@@ -418,7 +617,7 @@ class _HomeScreenState extends State<HomeScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle('5-Day Forecast', Icons.calendar_month_rounded),
+        _sectionTitle('5-Day Forecast', Icons.calendar_month_rounded, provider),
         const SizedBox(height: 12),
         GlassContainer(
           child: Column(
@@ -444,7 +643,7 @@ class _HomeScreenState extends State<HomeScreen>
                 children: [
                   if (entry.key > 0)
                     Divider(
-                        color: Colors.white.withOpacity(0.08), height: 1),
+                        color: provider.primaryTextColor.withOpacity(0.1), height: 1),
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     child: Row(
@@ -454,13 +653,13 @@ class _HomeScreenState extends State<HomeScreen>
                           child: Text(
                             entry.key == 0 ? 'Tomorrow' : dayName.substring(0, 3),
                             style: GoogleFonts.poppins(
-                              color: Colors.white,
+                              color: provider.primaryTextColor,
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
-                        Icon(icon, color: Colors.white70, size: 22),
+                        Icon(icon, color: provider.secondaryTextColor, size: 22),
                         const SizedBox(width: 8),
                         SizedBox(
                           width: 36,
@@ -478,7 +677,7 @@ class _HomeScreenState extends State<HomeScreen>
                         Text(
                           provider.formatTemp(low),
                           style: GoogleFonts.poppins(
-                            color: Colors.white38,
+                            color: provider.secondaryTextColor,
                             fontSize: 14,
                           ),
                         ),
@@ -491,7 +690,7 @@ class _HomeScreenState extends State<HomeScreen>
                         Text(
                           provider.formatTemp(high),
                           style: GoogleFonts.poppins(
-                            color: Colors.white,
+                            color: provider.primaryTextColor,
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -582,7 +781,7 @@ class _HomeScreenState extends State<HomeScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle('Weather Details', Icons.dashboard_rounded),
+        _sectionTitle('Weather Details', Icons.dashboard_rounded, provider),
         const SizedBox(height: 12),
         GridView.builder(
           shrinkWrap: true,
@@ -605,12 +804,12 @@ class _HomeScreenState extends State<HomeScreen>
                   Row(
                     children: [
                       Icon(d['icon'] as IconData,
-                          color: Colors.white54, size: 16),
+                          color: provider.secondaryTextColor, size: 16),
                       const SizedBox(width: 6),
                       Text(
                         d['label'] as String,
                         style: GoogleFonts.poppins(
-                          color: Colors.white54,
+                          color: provider.secondaryTextColor,
                           fontSize: 12,
                         ),
                       ),
@@ -620,7 +819,7 @@ class _HomeScreenState extends State<HomeScreen>
                   Text(
                     d['value'] as String,
                     style: GoogleFonts.poppins(
-                      color: Colors.white,
+                      color: provider.primaryTextColor,
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
                     ),
@@ -645,7 +844,7 @@ class _HomeScreenState extends State<HomeScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle('Air Quality', Icons.air_rounded),
+        _sectionTitle('Air Quality', Icons.air_rounded, provider),
         const SizedBox(height: 12),
         GlassContainer(
           child: Column(
@@ -688,7 +887,7 @@ class _HomeScreenState extends State<HomeScreen>
                         Text(
                           WeatherUtils.getAQIDescription(aqi),
                           style: GoogleFonts.poppins(
-                            color: Colors.white54,
+                            color: provider.secondaryTextColor,
                             fontSize: 12,
                           ),
                         ),
@@ -702,7 +901,7 @@ class _HomeScreenState extends State<HomeScreen>
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
                   value: aqi / 5,
-                  backgroundColor: Colors.white.withOpacity(0.1),
+                  backgroundColor: provider.primaryTextColor.withOpacity(0.1),
                   color: color,
                   minHeight: 6,
                 ),
@@ -716,9 +915,9 @@ class _HomeScreenState extends State<HomeScreen>
                       label: Text('Details',
                           style: GoogleFonts.poppins(fontSize: 13)),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
+                        foregroundColor: provider.primaryTextColor,
                         side:
-                            BorderSide(color: Colors.white.withOpacity(0.2)),
+                            BorderSide(color: provider.primaryTextColor.withOpacity(0.3)),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(vertical: 10),
@@ -744,9 +943,9 @@ class _HomeScreenState extends State<HomeScreen>
                       label: Text('Weather Map',
                           style: GoogleFonts.poppins(fontSize: 13)),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
+                        foregroundColor: provider.primaryTextColor,
                         side:
-                            BorderSide(color: Colors.white.withOpacity(0.2)),
+                            BorderSide(color: provider.primaryTextColor.withOpacity(0.3)),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(vertical: 10),
@@ -784,7 +983,7 @@ class _HomeScreenState extends State<HomeScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle('Temperature Trend', Icons.show_chart_rounded),
+        _sectionTitle('Temperature Trend', Icons.show_chart_rounded, provider),
         const SizedBox(height: 12),
         GlassContainer(
           child: TemperatureChart(
@@ -793,6 +992,48 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
       ],
+    );
+  }
+
+  // ── Activity Suggestions ──
+  Widget _buildActivitySuggestions(WeatherProvider provider) {
+    final weather = provider.currentWeather!;
+    final tempC =
+        (weather['main']['temp'] as num).toDouble() - 273.15;
+    final windSpeed =
+        (weather['wind']['speed'] as num).toDouble();
+    final humidity =
+        (weather['main']['humidity'] as num).toDouble();
+
+    return ActivitySuggestionsCard(
+      condition: provider.currentCondition,
+      tempC: tempC,
+      windSpeed: windSpeed,
+      humidity: humidity,
+      isNight: provider.isNight,
+    );
+  }
+
+  // ── Astronomy ──
+  Widget _buildAstronomy(WeatherProvider provider) {
+    final weather = provider.currentWeather!;
+    final sunrise =
+        (weather['sys']['sunrise'] as num).toInt();
+    final sunset =
+        (weather['sys']['sunset'] as num).toInt();
+    return AstronomyCard(
+      sunriseTimestamp: sunrise,
+      sunsetTimestamp: sunset,
+    );
+  }
+
+  // ── Pressure Trend ──
+  Widget _buildPressureTrend(WeatherProvider provider) {
+    final pressure =
+        (provider.currentWeather!['main']['pressure'] as num).toInt();
+    return PressureTrendCard(
+      currentPressure: pressure,
+      pressureChange: provider.pressureChange,
     );
   }
 
@@ -808,7 +1049,7 @@ class _HomeScreenState extends State<HomeScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle('Suggestions', Icons.tips_and_updates_rounded),
+        _sectionTitle('Suggestions', Icons.tips_and_updates_rounded, provider),
         const SizedBox(height: 12),
         ...suggestions.map(
           (s) => Padding(
@@ -821,18 +1062,18 @@ class _HomeScreenState extends State<HomeScreen>
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
+                      color: provider.cardBgColor,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(s['icon'] as IconData,
-                        color: Colors.white70, size: 22),
+                        color: provider.secondaryTextColor, size: 22),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Text(
                       s['text'] as String,
                       style: GoogleFonts.poppins(
-                        color: Colors.white.withOpacity(0.85),
+                        color: provider.primaryTextColor,
                         fontSize: 13,
                         fontWeight: FontWeight.w400,
                       ),
@@ -907,21 +1148,21 @@ class _HomeScreenState extends State<HomeScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.cloud_off_rounded,
-                size: 80, color: Colors.white.withOpacity(0.3)),
+                size: 80, color: provider.secondaryTextColor),
             const SizedBox(height: 20),
             Text(
               'Something went wrong',
               style: GoogleFonts.poppins(
                 fontSize: 22,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: provider.primaryTextColor,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               provider.error ?? 'Unknown error',
               style: GoogleFonts.poppins(
-                  color: Colors.white54, fontSize: 14),
+                  color: provider.secondaryTextColor, fontSize: 14),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 28),
@@ -929,8 +1170,8 @@ class _HomeScreenState extends State<HomeScreen>
               icon: const Icon(Icons.refresh_rounded),
               label: Text('Try Again', style: GoogleFonts.poppins()),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white.withOpacity(0.15),
-                foregroundColor: Colors.white,
+                backgroundColor: provider.cardBgColor,
+                foregroundColor: provider.primaryTextColor,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14)),
                 padding: const EdgeInsets.symmetric(
@@ -945,17 +1186,17 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   // ── Helpers ──
-  Widget _sectionTitle(String title, IconData icon) {
+  Widget _sectionTitle(String title, IconData icon, WeatherProvider provider) {
     return Row(
       children: [
-        Icon(icon, color: Colors.white60, size: 18),
+        Icon(icon, color: provider.secondaryTextColor, size: 18),
         const SizedBox(width: 8),
         Text(
           title,
           style: GoogleFonts.poppins(
             fontSize: 17,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: provider.primaryTextColor,
           ),
         ),
       ],

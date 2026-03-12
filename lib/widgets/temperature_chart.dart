@@ -17,6 +17,14 @@ class TemperatureChart extends StatelessWidget {
   Widget build(BuildContext context) {
     if (hourlyData.isEmpty) return const SizedBox.shrink();
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final labelColor = isDark
+        ? Colors.white.withOpacity(0.7)
+        : const Color(0xFF64748B);
+    final gridColor = isDark
+        ? Colors.white.withOpacity(0.1)
+        : Colors.black.withOpacity(0.08);
+
     final spots = <FlSpot>[];
     final labels = <String>[];
 
@@ -44,7 +52,7 @@ class TemperatureChart extends StatelessWidget {
             show: true,
             drawVerticalLine: false,
             getDrawingHorizontalLine: (value) => FlLine(
-              color: Colors.white.withOpacity(0.1),
+              color: gridColor,
               strokeWidth: 1,
             ),
           ),
@@ -60,10 +68,7 @@ class TemperatureChart extends StatelessWidget {
                 getTitlesWidget: (value, meta) {
                   return Text(
                     '${value.round()}°',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
-                      fontSize: 11,
-                    ),
+                    style: TextStyle(color: labelColor, fontSize: 11),
                   );
                 },
               ),
@@ -83,10 +88,7 @@ class TemperatureChart extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(
                       labels[idx],
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
-                        fontSize: 10,
-                      ),
+                      style: TextStyle(color: labelColor, fontSize: 10),
                     ),
                   );
                 },

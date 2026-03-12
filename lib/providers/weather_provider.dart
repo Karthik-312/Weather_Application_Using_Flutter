@@ -16,6 +16,10 @@ class WeatherProvider extends ChangeNotifier {
   double? _lat;
   double? _lon;
   bool _isDarkMode = true;
+  bool _isOfflineData = false;
+  Color _accentColor = const Color(0xFF6200EA);
+  double _pressureChange = 0;
+  int? _lastPressure;
 
   String get currentCity => _currentCity;
   Map<String, dynamic>? get currentWeather => _currentWeather;
@@ -28,8 +32,19 @@ class WeatherProvider extends ChangeNotifier {
   double? get lat => _lat;
   double? get lon => _lon;
   bool get isDarkMode => _isDarkMode;
+  bool get isOfflineData => _isOfflineData;
+  Color get accentColor => _accentColor;
+  double get pressureChange => _pressureChange;
 
   bool get isFavorite => _favoriteCities.contains(_currentCity);
+
+  List<Color> get backgroundGradient => _isDarkMode
+      ? [const Color(0xFF0A0E1A), const Color(0xFF0F172A), const Color(0xFF1E293B)]
+      : [const Color(0xFFF8FAFC), const Color(0xFFF1F5F9), const Color(0xFFE2E8F0)];
+
+  Color get primaryTextColor => _isDarkMode ? Colors.white : const Color(0xFF0F172A);
+  Color get secondaryTextColor => _isDarkMode ? Colors.white70 : const Color(0xFF64748B);
+  Color get cardBgColor => _isDarkMode ? Colors.white.withOpacity(0.12) : Colors.white.withOpacity(0.85);
 
   String get currentCondition =>
       _currentWeather?['weather']?[0]?['main'] ?? 'Clear';
@@ -60,17 +75,64 @@ class WeatherProvider extends ChangeNotifier {
   Map<String, dynamic> get aqiComponents =>
       _airQualityData?['list']?[0]?['components'] ?? {};
 
+  // Rain countdown from forecast
+  String? get rainCountdown {
+    if (_forecastData == null) return null;
+    final list = _forecastData!['list'] as List<dynamic>;
+    for (var item in list) {
+      final cond = item['weather'][0]['main'].toString().toLowerCase();
+      if (cond == 'rain' || cond == 'drizzle' || cond == 'thunderstorm') {
+        final dt = DateTime.fromMillisecondsSinceEpoch(
+            (item['dt'] as num).toInt() * 1000);
+        final diff = dt.difference(DateTime.now());
+        if (diff.isNegative) continue;
+        if (diff.inHours > 24) return null;
+        if (diff.inHours > 0) {
+          return 'Rain expected in ${diff.inHours}h ${diff.inMinutes % 60}m';
+        }
+        return 'Rain expected in ${diff.inMinutes}m';
+      }
+    }
+    return null;
+  }
+
+  // Share text
+  String getShareText() {
+    if (_currentWeather == null) return '';
+    final w = _currentWeather!;
+    final tempC =
+        ((w['main']['temp'] as num).toDouble() - 273.15).round();
+    final feelsLike =
+        ((w['main']['feels_like'] as num).toDouble() - 273.15).round();
+    final condition = WeatherUtils.capitalizeWords(
+        w['weather'][0]['description'] ?? '');
+    final humidity = w['main']['humidity'];
+    final wind = w['wind']['speed'];
+    final pressure = w['main']['pressure'];
+
+    return 'Weather in $_currentCity\n'
+        'Temperature: ${tempC}°C (Feels like ${feelsLike}°C)\n'
+        'Condition: $condition\n'
+        'Humidity: $humidity%\n'
+        'Wind: $wind m/s\n'
+        'Pressure: $pressure hPa\n'
+        '\n— Shared from Weather App';
+  }
+
   Future<void> initialize() async {
     _temperatureUnit = await StorageService.loadUnit();
     _isDarkMode = await StorageService.loadDarkMode();
     _currentCity = await StorageService.loadLastCity();
     _favoriteCities = await StorageService.loadFavorites();
+    final accentVal = await StorageService.loadAccentColor();
+    _accentColor = Color(accentVal);
     await fetchWeather();
   }
 
   Future<void> fetchWeather() async {
     _isLoading = true;
     _error = null;
+    _isOfflineData = false;
     notifyListeners();
 
     try {
@@ -86,9 +148,45 @@ class WeatherProvider extends ChangeNotifier {
             await WeatherService.fetchAirQuality(_lat!, _lon!);
       }
 
+      // Cache for offline use
+      StorageService.cacheWeatherData(
+          _currentCity, _currentWeather!, _forecastData!, _airQualityData);
       await StorageService.saveLastCity(_currentCity);
+
+      // Track pressure trend
+      final pressure =
+          (_currentWeather!['main']['pressure'] as num).toInt();
+      if (_lastPressure != null) {
+        _pressureChange = (pressure - _lastPressure!).toDouble();
+      }
+      _lastPressure = pressure;
+      StorageService.savePressureReading(pressure, _currentCity);
+
+      // Save weather history snapshot
+      final tempC =
+          ((_currentWeather!['main']['temp'] as num).toDouble() - 273.15)
+              .round();
+      StorageService.saveWeatherSnapshot({
+        'city': _currentCity,
+        'temp': tempC,
+        'condition':
+            _currentWeather!['weather'][0]['main'],
+        'humidity': _currentWeather!['main']['humidity'],
+        'wind': _currentWeather!['wind']['speed'],
+        'pressure': pressure,
+      });
     } catch (e) {
-      _error = e.toString();
+      // Fallback to cached data
+      final cached = await StorageService.loadCachedWeather(_currentCity);
+      if (cached != null) {
+        _currentWeather = cached['current'];
+        _forecastData = cached['forecast'];
+        _airQualityData = cached['airQuality'];
+        _isOfflineData = true;
+        _error = null;
+      } else {
+        _error = e.toString();
+      }
     }
 
     _isLoading = false;
@@ -100,9 +198,15 @@ class WeatherProvider extends ChangeNotifier {
     await fetchWeather();
   }
 
+  Future<List<Map<String, dynamic>>> searchCitySuggestions(
+      String query) async {
+    return await WeatherService.searchCities(query);
+  }
+
   Future<void> useCurrentLocation() async {
     _isLoading = true;
     _error = null;
+    _isOfflineData = false;
     notifyListeners();
 
     try {
@@ -118,6 +222,8 @@ class WeatherProvider extends ChangeNotifier {
           await WeatherService.fetchAirQuality(_lat!, _lon!);
 
       _currentCity = _currentWeather!['name'] ?? 'Unknown';
+      StorageService.cacheWeatherData(
+          _currentCity, _currentWeather!, _forecastData!, _airQualityData);
       await StorageService.saveLastCity(_currentCity);
     } catch (e) {
       _error = e.toString();
@@ -152,6 +258,12 @@ class WeatherProvider extends ChangeNotifier {
   void toggleTheme() {
     _isDarkMode = !_isDarkMode;
     StorageService.saveDarkMode(_isDarkMode);
+    notifyListeners();
+  }
+
+  void setAccentColor(Color color) {
+    _accentColor = color;
+    StorageService.saveAccentColor(color.value);
     notifyListeners();
   }
 

@@ -53,6 +53,7 @@ class _WeatherMapScreenState extends State<WeatherMapScreen> {
   Future<void> _fetchWeatherAtLocation(LatLng point) async {
     setState(() {
       _tappedLocation = point;
+      _tappedAddress = null;
       _isLoadingWeather = true;
       _showHint = false;
     });
